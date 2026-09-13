@@ -1,0 +1,23 @@
+version: "3.8"
+
+services:
+  edge-inference-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: edge_inference_service
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+      - LOG_LEVEL=info
+    volumes:
+      # Mount local models folder to allow hot-swapping weights without rebuilding the image
+      - ./models:/app/models
+    # Resource constraints to simulate or protect edge device capacity (e.g. Raspberry Pi 4 limits)
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"          # Limit to 2 CPU cores
+          memory: 512M         # Limit RAM to 512MB (plenty for our 65MB INT8 model)
+    restart: always

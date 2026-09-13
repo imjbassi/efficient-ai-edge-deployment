@@ -1,0 +1,46 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{url}
+\usepackage{hyperref}
+
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+    
+\begin{document}
+
+\title{Expanded Efficient Packaging and Deployment of AI Models for Edge Inference\\
+\thanks{This research is supported by the Edge AI Open Source Initiative.}
+}
+
+\author{\IEEEauthorblockN{Jaiveer Singh}
+\IEEEauthorblockA{\textit{Department of Computer Science and Engineering} \\
+\textit{Independent Researcher}\\
+jaiveer.singh@example.com}
+}
+
+\maketitle
+
+\begin{abstract}
+Deploying state-of-the-art Deep Neural Networks (DNNs) on resource-constrained edge hardware remains a formidable challenge due to severe limitations in memory, computing power, and energy. This paper presents an end-to-end engineering methodology that co-optimizes neural network compression with streamlined containerized edge packaging. Using MobileNetV2 pre-trained on ImageNet as a primary case study, we evaluate the joint impact of 30\% structured magnitude weight pruning and full INT8 Post-Training Quantization (PTQ). Our optimized model delivers a 4.1x reduction in model storage size (from 13.6 MB to 3.3 MB), a 3.7x reduction in active memory footprint (from 240 MB to 65 MB), and a 2.32x acceleration in mean CPU inference latency (from 220 ms to 95 ms) on a Raspberry Pi 4 Model B, while experiencing a negligible drop in Top-1 accuracy (from 71.8\% to 71.3\%). Furthermore, we analyze simulated energy per inference, showing a 2.47x improvement in energy efficiency (from 1.42 to 3.51 inferences per Joule). Finally, we demonstrate how this pipeline is successfully operationalized through a microservice architecture built on FastAPI and docker-compose, establishing a robust, production-ready framework for edge MLOps.
+\end{abstract}
+
+\begin{IEEEkeywords}
+Edge Inference, Model Quantization, Weight Pruning, FastAPI, Edge MLOps, Containerization
+\end{IEEEkeywords}
+
+\input{01_intro}
+\input{02_methodology}
+\input{03_benchmarks}
+\input{04_conclusion}
+
+\bibliographystyle{IEEEtran}
+\bibliography{references}
+
+\end{document}

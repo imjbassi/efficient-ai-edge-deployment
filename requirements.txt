@@ -1,0 +1,11 @@
+# Production edge serving dependencies
+fastapi>=0.100.0
+uvicorn>=0.20.0
+numpy>=1.23.5
+pillow>=9.5.0
+python-multipart>=0.0.6
+psutil>=5.9.0
+
+# Standalone TFLite runtime for ultra-lightweight edge docker containers (keeps image size < 250MB)
+# rather than installing full 1GB+ TensorFlow package.
+tflite-runtime>=2.11.0

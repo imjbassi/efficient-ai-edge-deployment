@@ -1,0 +1,17 @@
+\section{Conclusion and Future Work}
+\label{sec:conclusion}
+
+Deploying deep learning models on physical edge nodes is a critical milestone for building responsive, secure, private, and scalable IoT applications. However, hardware resources at the edge are inherently scarce, necessitating co-designed solutions that unify hardware-aware neural compression with robust systems-level container packaging. In this work, we presented an end-to-end edge deployment methodology that integrates structured weight pruning, full INT8 post-training quantization, FastAPI microservice encapsulation, and resource-bounded Docker containerization.
+
+Our experimental validation demonstrates that our proposed engineering pipeline achieves substantial efficiency improvements across heterogeneous edge compute tiers. For our primary case study of MobileNetV2, our compressed INT8 model reduces model storage footprint by 4.12x (to 3.3\,MB) and active memory consumption by 3.7x (to 65\,MB), while delivering a 2.32x speedup on the CPU-only Raspberry Pi 4 (mean latency of 95.0\,ms) with a negligible top-1 accuracy degradation of only 0.5\%. In addition, our physical profiling revealed a 2.47x improvement in energy efficiency (to 3.51 inferences per Joule), illustrating that hardware-aware compression significantly mitigates battery drain. When deployed with dedicated hardware accelerators (the NVIDIA Jetson GPU or Google Coral TPU), latency was reduced to 18.0\,ms and 11.0\,ms, respectively.
+
+We also conducted an in-depth ablation study on containerization overhead, which verified that Docker Compose introduces an almost negligible latency overhead (approx.\ 5\%) while ensuring perfect dependency isolation and portability across different hardware architectures. Furthermore, we showed that by employing persistent local volume mounts, models can be dynamically hot-swapped without requiring service restarts, defining a robust, production-ready edge MLOps paradigm.
+
+For future work, we plan to extend our research in three major areas:
+\begin{enumerate}
+    \item \textbf{Dynamic Cloud-Edge Partitioning:} Developing an automated routing orchestrator that adaptively decides whether to execute a neural layer locally on the edge node or delegate it to a high-powered cloud cluster based on real-time network conditions and battery status.
+    \item \textbf{Transformer-class Architectures:} Adapting our joint pruning and quantization pipeline to handle lightweight transformers (such as MobileBERT or ViT-Tiny) for natural language processing and computer vision at the edge.
+    \item \textbf{TinyML for Microcontrollers:} Porting our compression techniques to ultra-low-power microcontrollers (e.g., ARM Cortex-M) utilizing TensorFlow Lite Micro and specialized bare-metal libraries.
+\end{enumerate}
+
+In conclusion, as AI applications continue to diffuse into the physical world, maintaining a holistic perspective that links neural architectures, compiler runtimes, and system containerization will remain essential. The methodology and open design principles established in this work assist the AI community and industrial practitioners in bridging the gap between theoretical deep learning models and practical, edge-first deployment.
