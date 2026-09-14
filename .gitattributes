@@ -1,0 +1,11 @@
+* text=auto
+*.py text eol=lf
+*.tex text eol=lf
+*.bib text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.json text eol=lf
+*.cff text eol=lf
+*.pdf binary
+*.tflite binary

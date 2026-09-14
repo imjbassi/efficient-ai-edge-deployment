@@ -1,61 +1,96 @@
-# Efficient Packaging and Deployment of AI Models for Edge Inference
+# Efficient AI Edge Deployment
 
-This repository contains an auditable reference implementation for packaging a MobileNetV2 image classifier for edge inference. It combines optional pruning, full-integer TensorFlow Lite conversion, a FastAPI service, and Docker Compose deployment.
+[![CI](https://github.com/imjbassi/efficient-ai-edge-deployment/actions/workflows/ci.yml/badge.svg)](https://github.com/imjbassi/efficient-ai-edge-deployment/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![ORCID](https://img.shields.io/badge/ORCID-0009--0006--3633--3220-A6CE39.svg)](https://orcid.org/0009-0006-3633-3220)
 
-## Included artifacts
+A reproducible MobileNetV2 case study covering FP32 and full-integer TensorFlow Lite conversion, validation on Imagenette, single-thread CPU benchmarking, and deployment through FastAPI and Docker.
 
-- [Current compiled manuscript](output/pdf/main.pdf) (IEEE conference layout; reference results, pending empirical validation).
-- `src/`: model construction, quantization, benchmarking, and serving code.
-- `paper/`: the IEEEtran manuscript source and bibliography.
-- `benchmark_results.json`: a reference/emulated Raspberry Pi 4 profile.
-- `Dockerfile` and `docker-compose.yml`: container packaging and runtime limits.
-- `Expanded_Efficient_Packaging_and_Deployment_of_AI_Models_for_Edge_Inference.pdf`: the original supplied manuscript artifact.
+## Measured result
 
-## Evidence status
+The checked-in experiment evaluated every image in the 3,925-image Imagenette validation split. Calibration used 200 deterministically selected training images. Latency used 500 validation inputs after 50 warm-up runs on an AMD Ryzen 5 7600, TensorFlow Lite 2.15.1, XNNPACK, and one interpreter thread; preprocessing was excluded.
 
-The reference profile reports 13.6 MB to 3.3 MB model storage and 220 ms to 95 ms mean latency for FP32 and INT8 configurations. These values are retained for traceability, but the repository does not include raw hardware logs, power traces, validation predictions, or calibration images. Treat them as reference/emulated values, not as independently reproduced physical measurements. Energy values are derived from assumed power and latency.
+| Metric | FP32 | INT8 |
+|---|---:|---:|
+| Model size | 13.34 MiB | 3.81 MiB |
+| Top-1 accuracy | 66.73% | 65.81% |
+| Top-5 accuracy | 90.75% | 89.81% |
+| Mean latency | 8.53 ms | 6.46 ms |
+| 90th-percentile latency | 9.88 ms | 7.29 ms |
 
-The manuscript intentionally does not claim ImageNet accuracy, Jetson/Coral performance, batching gains, or container overhead until the corresponding artifacts are added.
+INT8 reduced storage by 71.5%, improved mean host-CPU latency by 1.32x, and decreased top-1 accuracy by 0.92 percentage points. These are host measurements, not Raspberry Pi, Jetson, accelerator, power, or container-overhead results.
 
-## Quantization with real calibration data
+- [Compiled paper](output/pdf/main.pdf)
+- [Machine-readable results](results/windows_cpu_imagenette.json)
+- [Publication status](PUBLICATION_STATUS.md)
+- [Citation metadata](CITATION.cff)
 
-The conversion scripts reject random calibration arrays. Provide a directory of representative `.jpg`, `.jpeg`, `.png`, or `.bmp` images and set:
+## Reproduce the experiment
 
-```text
-$env:EDGE_CALIBRATION_DIR = 'C:\path\to\calibration-images'
-python src\quantize.py
+Python 3.10 is required. The download script pins and verifies the Imagenette archive SHA-256 digest before extraction.
+
+```powershell
+python -m venv .venv
+.venv\Scripts\python -m pip install -r requirements-experiment.txt
+.venv\Scripts\python scripts\download_imagenette.py --destination data
+$env:TF_ENABLE_ONEDNN_OPTS = "0"
+.venv\Scripts\python src\experiment.py `
+  --data-dir data\imagenette2-160 `
+  --archive data\imagenette2-160.tgz `
+  --output results\local_experiment.json `
+  --calibration-samples 200 `
+  --latency-samples 500 `
+  --warmup 50 `
+  --threads 1
 ```
 
-The images are converted to RGB, resized to `224x224`, and normalized with MobileNetV2 preprocessing. The calibration set should be documented and hashed for a publishable experiment.
+Use `--reuse-models` to repeat evaluation and timing without reconverting the checked-in models. Exact results vary by CPU and system load. The result JSON retains raw timings, model and dataset hashes, environment metadata, accuracy counts, and Wilson confidence intervals.
 
-## Run the service
+## Run the inference service
 
-Place a valid model at `models/mobilenet_v2_int8.tflite`, install `requirements.txt`, and start:
+On Linux, install the lightweight serving dependencies and start the service:
 
-```text
-uvicorn src.deploy:app --host 0.0.0.0 --port 8000
+```bash
+python -m venv .venv
+.venv/bin/pip install -r requirements.txt
+.venv/bin/uvicorn src.deploy:app --host 0.0.0.0 --port 8000
 ```
 
-The service exposes `/health`, `/metadata`, and `/predict`. Missing models return HTTP 503 from health and prediction endpoints. Predictions return class indices and scores; labels are null because no verified class mapping is bundled. Set `EDGE_ALLOW_MOCK=1` only for demonstrations that explicitly need the legacy simulated fallback. Model updates require a service restart; a bind mount alone does not reload the interpreter.
+Then submit an image:
 
-## Run the benchmark
-
-```text
-python src/benchmark.py --force-emulation --save reference_run.json
+```bash
+curl -F "file=@image.jpg" http://localhost:8000/predict
 ```
 
-Live mode requires TensorFlow, NumPy and psutil and fails on errors. It retains per-run timings, model hashes, host and runtime metadata, and leaves power/energy unmeasured. It uses seeded synthetic inputs, one warm-up per backend, and coexisting models in one process: RSS cannot be used to claim isolated memory savings. It compares Keras FP32 against TFLite INT8, confounding precision and backend. Controlled hardware and labeled accuracy experiments remain necessary.
+The API exposes `/health`, `/metadata`, and `/predict`. It validates image data and upload size, uses the paper's resize/crop/scale pipeline, reads quantization parameters from the model, and serializes interpreter access. Prediction output contains ImageNet class indices and scores; labels are intentionally omitted rather than guessed.
 
-## Build the container
+## Run with Docker
 
-```text
+```bash
 docker compose up --build
 ```
 
-The model directory is mounted at `/app/models`; the Compose CPU and memory limits are deployment policy, not evidence of measured performance.
+The image includes the checked-in INT8 model, runs as a non-root user, uses a read-only filesystem, and defines CPU, memory, and upload-size limits. These limits are deployment policy rather than benchmark evidence.
 
-## Compile the paper
+## Build and test
 
-The checked-in PDF was compiled with Tectonic 0.17.0 and visually inspected. From the repository root, run `tectonic paper/main.tex --outdir output/pdf`. Alternatively, from `paper/`, run `pdflatex main.tex`, `bibtex main`, and `pdflatex main.tex` twice. The root-level original PDF is preserved as a historical draft; it is not the revised manuscript.
+```bash
+python -m compileall -q src tests scripts
+python -m unittest discover -s tests -v
+python scripts/verify_artifacts.py
+tectonic paper/main.tex --outdir output/pdf
+```
 
-See [publication status](PUBLICATION_STATUS.md) for validation and outstanding submission requirements. Model conversion requires a separate TensorFlow environment; `requirements.txt` covers Linux edge serving with a compatible TFLite wheel, not training or every host platform.
+The experiment environment installs full TensorFlow and is intentionally separate from the smaller Linux serving environment. The MIT license applies to repository code and documentation; pretrained model weights and Imagenette remain subject to their upstream terms.
+
+## Repository layout
+
+```text
+models/       Reproducible FP32 and INT8 TFLite artifacts
+output/pdf/   Compiled manuscript
+paper/        LaTeX source and bibliography
+results/      Raw measurements and experiment metadata
+scripts/      Checksum-verified dataset acquisition
+src/          Experiment, benchmark entry point, and service
+tests/        Service regression tests
+```

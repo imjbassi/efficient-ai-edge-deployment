@@ -1,14 +1,26 @@
-% paper/02_methodology.tex
 \section{Methodology}
-Our proposed deployment pipeline consists of three interconnected stages: structural pruning, mixed-precision quantization, and hardware-aware containerization. Unlike traditional sequential pipelines, our approach uses the constraints of the final deployment container to inform the pruning and quantization parameters iteratively.
+\label{sec:methodology}
 
-\subsection{Structural Pruning and Quantization}
-We apply structured pruning to eliminate redundant channels within convolutional layers, targeting a predefined sparsity threshold that aligns with the cache size of the target hardware. Following pruning, we employ Post-Training Quantization (PTQ) to map 32-bit floating-point (FP32) weights and activations to 8-bit integers (INT8). To mitigate accuracy degradation, we utilize a calibration dataset to optimally determine the scaling factors for the INT8 tensors. 
+\subsection{Model conversion}
 
-\subsection{Hardware-Aware Containerization}
-Edge devices frequently suffer from overhead introduced by standard containerization. We mitigate this by using minimal, multi-stage Docker builds equipped with specialized lightweight runtime binaries. For devices with embedded GPUs, the container is configured with direct hardware passthrough to minimize abstraction penalties.
+The source model is MobileNetV2 with ImageNet weights and a $224\times224\times3$ input. TensorFlow 2.15.1 exports the same SavedModel graph twice. The first conversion retains FP32 tensors. The second enables default optimization, restricts operators to the built-in INT8 set, and requests signed INT8 inputs and outputs. A representative dataset of 200 training images calibrates activation ranges. For scale $S$, zero point $Z$, and integer bounds $q_{\min}$ and $q_{\max}$, an input value $x$ is mapped as
+\begin{equation}
+q=\operatorname{clip}(\operatorname{round}(x/S)+Z,q_{\min},q_{\max}).
+\end{equation}
+Both conversion outputs are retained with SHA-256 hashes.
 
-\subsection{Differentiating from Standard Runtime Optimization}
-Industry-standard edge deployment frameworks, such as TensorFlow Lite (TFLite) and NVIDIA TensorRT, provide robust post-training quantization and kernel optimizations. However, these tools generally treat the model and the deployment container as isolated entities, often suffering from I/O bottlenecks during CPU-to-GPU memory migration on edge devices. 
+Pruning is outside the reported pipeline. No pruning accuracy or speed claim is made.
 
-Our pipeline distinguishes itself by integrating custom CUDA kernels and asynchronous CUDA streams directly into the containerized runtime. Rather than relying on generic execution graphs, our framework actively overlaps data transfers with computation to maximize hardware utilization. By profiling the exact memory limits and scheduling constraints of the target Docker environment, the pruning and quantization phases iteratively adjust the model's sparsity and precision. This ensures that the packaged model does not merely execute successfully, but maximally utilizes the specific cache hierarchies of the target hardware—a capability not natively exposed by standalone TFLite or TensorRT workflows.
+\subsection{Dataset and accuracy protocol}
+
+Imagenette is a ten-class subset of ImageNet containing tench, English springer, cassette player, chain saw, church, French horn, garbage truck, gas pump, golf ball, and parachute \cite{imagenette}. The 160-pixel distribution contains 9,470 training and 3,925 validation images. Its archive is identified by SHA-256 digest \texttt{64d0c485...db02fe5}. Calibration images are selected from the training split with seed 20260914. All validation images are evaluated.
+
+Each image is converted to RGB, resized so its shortest side is 256 pixels, center-cropped to $224\times224$, and scaled to $[-1,1]$. Predicted indices are compared with the corresponding ImageNet class indices. We report top-1 and top-5 accuracy and Wilson 95\% confidence intervals. The use of ImageNet-pretrained weights means this experiment evaluates conversion fidelity on an ImageNet subset; it is not an Imagenette training benchmark.
+
+\subsection{Latency protocol}
+
+Latency is measured with TensorFlow Lite's XNNPACK CPU delegate on an AMD Ryzen 5 7600 running Windows build 26100. One interpreter thread is used, oneDNN graph optimizations are disabled, and preprocessing is excluded. After 50 untimed warm-up invocations, 500 deterministically shuffled validation inputs are timed individually with a monotonic nanosecond clock. The paper reports mean, median, 90th percentile, standard deviation, and throughput computed as the reciprocal of mean latency.
+
+\subsection{Serving and packaging}
+
+The FastAPI service loads \texttt{models/mobilenet\_v2\_int8.tflite}, validates upload size and image decoding, applies the evaluation resize, crop, and scaling procedure, quantizes according to tensor metadata, serializes interpreter access with a lock, and exposes health and metadata endpoints. Missing models return HTTP 503. The container runs as a non-root user with CPU and memory ceilings. These controls define deployment behavior; they are not treated as Raspberry Pi, Jetson, power, or container-overhead measurements.

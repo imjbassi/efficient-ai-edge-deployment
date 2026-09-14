@@ -1,21 +1,31 @@
 \documentclass[conference]{IEEEtran}
-\usepackage{cite}
-\usepackage{amsmath,amssymb}
-\usepackage{newtxtext,newtxmath}
+\usepackage{amsmath}
 \usepackage{booktabs}
-\usepackage{graphicx}
-\usepackage{url}
+\usepackage{cite}
+\usepackage{xcolor}
 \usepackage[hidelinks]{hyperref}
+\usepackage{newtxtext,newtxmath}
+
+\definecolor{orcidgreen}{HTML}{A6CE39}
+\newcommand{\orcidicon}{\href{https://orcid.org/0009-0006-3633-3220}{\textcolor{orcidgreen}{\raisebox{0.15ex}{\scriptsize\textsf{\bfseries iD}}}}}
+
 \begin{document}
-\title{Efficient Packaging and Deployment of AI Models for Edge Inference}
-\author{\IEEEauthorblockN{Jaiveer Bassi}\IEEEauthorblockA{College of Science, Engineering, and Technology\\Grand Canyon University, Phoenix, Arizona, USA\\jaiveerbassi@yahoo.com}}
+\title{\bfseries Efficient Packaging and Deployment of AI Models for Edge Inference\\[0.45em]
+\large A Reproducible MobileNetV2 FP32-to-INT8 Study}
+\author{\IEEEauthorblockN{Jaiveer Bassi\,\orcidicon}
+\IEEEauthorblockA{Independent Researcher, USA\\
+\texttt{jaiveerbassi@yahoo.com}\\
+{\footnotesize ORCID: 0009-0006-3633-3220}}}
 \maketitle
+
 \begin{abstract}
-Edge deployment requires more than a compact neural-network artifact: the model, runtime, service boundary, and resource policy must be reproducible as one system. This paper presents an open implementation that combines MobileNetV2, post-training integer quantization, optional magnitude pruning, a FastAPI inference service, and Docker packaging. We describe the pipeline, its operational interfaces, and a reproducibility-oriented benchmark protocol. The repository contains a reference benchmark profile reporting a reduction in model storage from 13.6\,MB to 3.3\,MB and mean inference latency from 220\,ms to 95\,ms; these values are preserved as reference/emulated results rather than presented as newly verified measurements. Energy values are derived from latency and an assumed power profile. We therefore separate measured, derived, and emulated quantities and identify the calibration, hardware, and dataset artifacts required for a publishable empirical evaluation.
+Edge inference systems require a compact model and a reproducible path from conversion to serving. This paper presents an open MobileNetV2 deployment artifact that generates comparable FP32 and full-integer TensorFlow Lite models, evaluates both on the complete 3,925-image Imagenette validation split, measures single-thread host-CPU latency, and serves the INT8 artifact through FastAPI and Docker. Calibration uses 200 deterministically selected training images. On an AMD Ryzen 5 7600 with TensorFlow 2.15.1 and one TFLite thread, integer quantization reduced the model from 13.34 to 3.81 MiB (3.50$\times$), reduced mean inference latency from 8.53 to 6.46 ms (1.32$\times$), and changed top-1 accuracy from 66.73\% to 65.81\% (a 0.92 percentage-point decrease). The artifact records raw latency samples, hashes, preprocessing, versions, and dataset provenance. These host results establish the conversion pipeline; device-specific latency, energy, and container overhead remain separate measurements for target edge hardware.
 \end{abstract}
+
 \begin{IEEEkeywords}
-edge inference, post-training quantization, pruning, TensorFlow Lite, FastAPI, Docker, reproducibility
+edge inference, integer quantization, MobileNetV2, TensorFlow Lite, reproducibility, containerization
 \end{IEEEkeywords}
+
 \input{01_intro}
 \input{02_methodology}
 \input{03_benchmarks}

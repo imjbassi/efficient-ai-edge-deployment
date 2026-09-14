@@ -1,0 +1,14 @@
+.git
+.github
+.venv
+data
+docs
+output
+paper
+results
+tests
+tmp
+*.md
+*.pdf
+*.pyc
+__pycache__

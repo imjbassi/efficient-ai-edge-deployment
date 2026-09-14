@@ -7,15 +7,15 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - PORT=8000
-      - LOG_LEVEL=info
-    volumes:
-      # Updating files avoids image rebuilds; restart the service to reload weights.
-      - ./models:/app/models
-    # Deployment limits; these are not benchmark measurements.
-    deploy:
-      resources:
-        limits:
-          cpus: "2.0"          # Limit to 2 CPU cores
-          memory: 512M         # Configured ceiling; validate on the target hardware.
-    restart: always
+      MODEL_PATH: /app/models/mobilenet_v2_int8.tflite
+      TFLITE_THREADS: "1"
+      MAX_UPLOAD_BYTES: "10485760"
+      MAX_IMAGE_PIXELS: "25000000"
+    cpus: 2.0
+    mem_limit: 512m
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped

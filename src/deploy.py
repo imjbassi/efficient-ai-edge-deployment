@@ -1,359 +1,188 @@
+"""FastAPI service for a quantized MobileNetV2 TFLite model."""
+
 from __future__ import annotations
 
-import os
-import sys
-import time
+import io
 import logging
-from typing import Dict, Any, List
+import os
+import threading
+import time
+from contextlib import asynccontextmanager
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
 
-# Configure logging
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
-logger = logging.getLogger("edge_deploy_service")
+import numpy as np
+import psutil
+from fastapi import FastAPI, File, HTTPException, UploadFile
+from PIL import Image, UnidentifiedImageError
 
-# FastAPI and dependencies
 try:
-    from fastapi import FastAPI, UploadFile, File, HTTPException, status
-    from fastapi.middleware.cors import CORSMiddleware
-except ImportError:
-    logger.error("FastAPI or dependencies not found. Please install fastapi and uvicorn.")
-    sys.exit(1)
-
-# Image processing dependencies
-try:
-    from PIL import Image
-    import io
-except ImportError:
-    Image = None
-    logger.warning("Pillow (PIL) not found. Image uploads will require manual raw bytes parsing or will use mock processing.")
-
-# TFLite runtimes
-try:
-    import numpy as np
-except ImportError:
-    np = None
-
-# Attempt to import TFLite
-tflite_interpreter = None
-try:
-    # First try tensorflow
-    import tensorflow as tf
-    tflite_interpreter = tf.lite.Interpreter
-    logger.info("Successfully imported TensorFlow TFLite Interpreter.")
+    from tflite_runtime.interpreter import Interpreter
 except ImportError:
     try:
-        # Fallback to standalone tflite_runtime
-        import tflite_runtime.interpreter as tflite
-        tflite_interpreter = tflite.Interpreter
-        logger.info("Successfully imported tflite_runtime Interpreter.")
+        from tensorflow import lite
+
+        Interpreter = lite.Interpreter
     except ImportError:
-        logger.warning("TensorFlow/tflite_runtime not available. Inference is unavailable.")
+        Interpreter = None
 
-# Initialize FastAPI App
-app = FastAPI(
-    title="Edge Inference Service",
-    description="Research reference service serving quantized INT8 MobileNetV2 for edge devices.",
-    version="1.0.0"
-)
 
-# Enable CORS for edge connectivity
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+LOGGER = logging.getLogger("edge_inference")
+MODEL_PATH = Path(os.getenv("MODEL_PATH", "models/mobilenet_v2_int8.tflite"))
+MAX_UPLOAD_BYTES = int(os.getenv("MAX_UPLOAD_BYTES", str(10 * 1024 * 1024)))
+MAX_IMAGE_PIXELS = int(os.getenv("MAX_IMAGE_PIXELS", "25000000"))
 
-# Model configuration paths
-MODEL_PATHS = [
-    "src/mobilenet_v2_quant.tflite",
-    "models/mobilenet_v2_int8.tflite",
-    "mobilenet_v2_quant.tflite"
-]
 
-# State variables
-interpreter = None
-input_details = None
-output_details = None
-model_loaded_path = None
-ALLOW_MOCK = os.getenv("EDGE_ALLOW_MOCK", "0") == "1"
+@dataclass
+class Runtime:
+    interpreter: Any = None
+    input_detail: dict | None = None
+    output_detail: dict | None = None
+    error: str | None = None
 
-def load_tflite_model():
-    global interpreter, input_details, output_details, model_loaded_path
-    if tflite_interpreter is None:
-        logger.warning("TFLite Interpreter is not installed. Model cannot be loaded natively.")
-        return False
 
-    for path in MODEL_PATHS:
-        if os.path.exists(path):
-            try:
-                logger.info(f"Loading TFLite model from {path}...")
-                interpreter = tflite_interpreter(model_path=path)
-                interpreter.allocate_tensors()
-                input_details = interpreter.get_input_details()
-                output_details = interpreter.get_output_details()
-                model_loaded_path = path
-                logger.info(f"Successfully loaded model from {path}")
-                return True
-            except Exception as e:
-                logger.error(f"Failed to load model from {path}: {e}")
+runtime = Runtime()
+invoke_lock = threading.Lock()
 
-    logger.warning("No valid TFLite model found at configured paths. Model is unavailable.")
-    return False
 
-# Load model at startup
-@app.on_event("startup")
-async def startup_event():
-    load_tflite_model()
-
-# Simple mock ImageNet labels for edge fallback predictions
-MOCK_LABELS = [
-    "goldfish", "great white shark", "tiger shark", "hammerhead shark", "stingray",
-    "cock", "hen", "ostrich", "brambling", "goldfinch", "house finch", "junco",
-    "indigo bunting", "robin", "bulbul", "jay", "magpie", "chickadee", "water ouzel",
-    "kite", "bald eagle", "vulture", "great grey owl", "black grouse", "ptarmigan",
-    "ruffed grouse", "prairie chicken", "peacock", "quail", "partridge", "African grey",
-    "macaw", "sulphur-crested cockatoo", "lorikeet", "coucal", "bee eater", "hornbill",
-    "hummingbird", "jacamar", "toucan", "drake", "red-breasted merganser", "goose",
-    "black swan", "tusker", "echidna", "platypus", "wallaby", "koala", "wombat",
-    "jellyfish", "sea anemone", "brain coral", "flatworm", "nematode", "conch",
-    "snail", "slug", "sea slug", "chiton", "chambered nautilus", "Dungeness crab",
-    "rock crab", "fiddler crab", "king crab", "American lobster", "spiny lobster",
-    "crayfish", "hermit crab", "isopod", "white stork", "black stork", "spoonbill",
-    "flamingo", "little blue heron", "American egret", "bittern", "crane", "limpkin",
-    "European gallinule", "American coot", "bustard", "ruddy turnstone", "red-backed sandpiper",
-    "redshank", "dowitcher", "oystercatcher", "pelican", "king penguin", "albatross",
-    "grey whale", "killer whale", "dugong", "sea lion", "Chihuahua", "Japanese spaniel",
-    "Maltese dog", "Pekinese", "Shih-Tzu", "Blenheim spaniel", "papillon", "toy terrier",
-    "Rhodesian ridgeback", "Afghan hound", "basset", "beagle", "bloodhound", "bluetick",
-    "black-and-tan coonhound", "Walker hound", "English foxhound", "redbone", "borzoi",
-    "Irish wolfhound", "italian greyhound", "whippet", "Ibizan hound", "Norwegian elkhound",
-    "otterhound", "Saluki", "whippet", "boxer", "Great Dane", "Saint Bernard", "bullmastiff"
-]
-
-def preprocess_image(image_bytes: bytes) -> np.ndarray:
-    """Preprocesses input image bytes to match MobileNetV2 TFLite specifications."""
-    if np is None:
-        raise HTTPException(status_code=500, detail="NumPy is not available.")
-    if Image is None:
-        raise HTTPException(status_code=500, detail="Pillow is not available.")
-
+def load_model(path: Path = MODEL_PATH) -> None:
+    runtime.interpreter = None
+    runtime.input_detail = None
+    runtime.output_detail = None
+    runtime.error = None
+    if Interpreter is None:
+        runtime.error = "TensorFlow Lite runtime is not installed"
+        return
+    if not path.is_file():
+        runtime.error = f"Model not found: {path}"
+        return
     try:
-        # Load image from bytes
-        img = Image.open(io.BytesIO(image_bytes)).convert('RGB')
-        # Resize to MobileNetV2 input size
-        img = img.resize((224, 224))
-        img_array = np.array(img, dtype=np.float32)
+        interpreter = Interpreter(model_path=str(path), num_threads=max(1, int(os.getenv("TFLITE_THREADS", "1"))))
+        interpreter.allocate_tensors()
+        runtime.interpreter = interpreter
+        runtime.input_detail = interpreter.get_input_details()[0]
+        runtime.output_detail = interpreter.get_output_details()[0]
+    except Exception as exc:
+        runtime.error = f"Model load failed: {exc}"
+        LOGGER.exception(runtime.error)
 
-        # Expand dimensions to batch size 1
-        img_array = np.expand_dims(img_array, axis=0)
 
-        # Check model expected input dtype
-        global input_details
-        if input_details is not None:
-            expected_dtype = input_details[0]['dtype']
-            if expected_dtype in (np.int8, np.uint8):
-                img_array = (img_array / 127.5) - 1.0
-                scale, zero_point = input_details[0].get("quantization", (0.0, 0))
-                if not scale:
-                    raise HTTPException(status_code=500, detail="Model has invalid input quantization metadata.")
-                info = np.iinfo(expected_dtype)
-                img_array = np.clip(np.round(img_array / scale + zero_point), info.min, info.max).astype(expected_dtype)
-            else:
-                # Default preprocessing for MobileNetV2 FP32 ([-1, 1] scaling)
-                img_array = (img_array / 127.5) - 1.0
-                img_array = img_array.astype(np.float32)
-        else:
-            # Default fallback scaling
-            img_array = (img_array / 127.5) - 1.0
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    load_model()
+    yield
 
-        return img_array
+
+app = FastAPI(
+    title="MobileNetV2 Edge Inference",
+    description="A reproducible TFLite inference service.",
+    version="2.0.0",
+    lifespan=lifespan,
+)
+
+
+def _quantize(array: np.ndarray, detail: dict) -> np.ndarray:
+    dtype = detail["dtype"]
+    if dtype not in (np.int8, np.uint8):
+        return array.astype(dtype)
+    scale, zero_point = detail["quantization"]
+    if scale <= 0:
+        raise HTTPException(status_code=500, detail="Invalid model input quantization metadata")
+    bounds = np.iinfo(dtype)
+    return np.clip(np.rint(array / scale + zero_point), bounds.min, bounds.max).astype(dtype)
+
+
+def preprocess_image(content: bytes, detail: dict) -> np.ndarray:
+    try:
+        with Image.open(io.BytesIO(content)) as source:
+            if source.width * source.height > MAX_IMAGE_PIXELS:
+                raise HTTPException(status_code=413, detail="Image dimensions exceed configured limit")
+            image = source.convert("RGB")
+            height, width = (int(detail["shape"][1]), int(detail["shape"][2]))
+            resize_short_side = round(max(height, width) * 256 / 224)
+            scale = resize_short_side / min(image.size)
+            image = image.resize(
+                (round(image.width * scale), round(image.height * scale)),
+                Image.Resampling.BILINEAR,
+            )
+            left = (image.width - width) // 2
+            top = (image.height - height) // 2
+            image = image.crop((left, top, left + width, top + height))
+            array = np.asarray(image, dtype=np.float32)
     except HTTPException:
         raise
-    except Exception as e:
-        logger.error(f"Error preprocessing image: {e}")
-        raise HTTPException(status_code=400, detail=f"Invalid image content: {e}")
+    except (UnidentifiedImageError, OSError) as exc:
+        raise HTTPException(status_code=400, detail="Invalid image") from exc
+    normalized = (array / 127.5) - 1.0
+    return _quantize(np.expand_dims(normalized, 0), detail)
 
-@app.get("/", tags=["General"])
-async def root():
-    """Service metadata and routing entrypoint."""
+
+def _require_model() -> None:
+    if runtime.interpreter is None:
+        raise HTTPException(status_code=503, detail=runtime.error or "Model unavailable")
+
+
+@app.get("/")
+def root() -> dict:
     return {
-        "service": "Edge Inference Microservice",
+        "service": app.title,
+        "version": app.version,
+        "model_loaded": runtime.interpreter is not None,
+        "model_path": str(MODEL_PATH),
+    }
+
+
+@app.get("/health")
+def health() -> dict:
+    _require_model()
+    return {
         "status": "healthy",
-        "model_loaded": interpreter is not None,
-        "model_path": model_loaded_path,
-        "endpoints": {
-            "/predict": "POST - Upload an image file for classification",
-            "/health": "GET - Deep health and status check of the deployment",
-            "/metadata": "GET - Model input/output tensor profiles"
-        }
+        "model_path": str(MODEL_PATH),
+        "rss_mib": round(psutil.Process().memory_info().rss / 2**20, 2),
     }
 
-@app.get("/health", tags=["General"])
-async def health():
-    """Exposes health status for Kubernetes/Docker edge orchestration."""
-    if interpreter is None:
-        raise HTTPException(status_code=503, detail="Model unavailable")
 
-    # Check current process memory usage
-    ram_mb = 0.0
-    try:
-        import psutil
-        process = psutil.Process(os.getpid())
-        ram_mb = process.memory_info().rss / (1024 * 1024)
-    except ImportError:
-        pass
-
+@app.get("/metadata")
+def metadata() -> dict:
+    _require_model()
     return {
-        "status": "healthy" if interpreter is not None else "degraded_mock_active",
-        "timestamp": time.time(),
-        "model_loaded": interpreter is not None,
-        "model_path": model_loaded_path,
-        "memory_usage_mb": round(ram_mb, 2),
-        "runtime": "tflite" if interpreter is not None else "mock_emulated",
-        "device_type": "CPU/Edge-Optimized"
-    }
-
-@app.get("/metadata", tags=["Model"])
-async def metadata():
-    """Exposes input/output layer profiles for verification."""
-    if interpreter is None:
-        raise HTTPException(status_code=503, detail="Model is not loaded. No metadata available.")
-
-    return {
-        "model_path": model_loaded_path,
-        "input_details": [
-            {
-                "name": detail["name"],
-                "shape": detail["shape"].tolist() if hasattr(detail["shape"], "tolist") else list(detail["shape"]),
-                "dtype": str(detail["dtype"]),
-                "quantization": detail["quantization"]
-            } for detail in input_details
-        ],
-        "output_details": [
-            {
-                "name": detail["name"],
-                "shape": detail["shape"].tolist() if hasattr(detail["shape"], "tolist") else list(detail["shape"]),
-                "dtype": str(detail["dtype"]),
-                "quantization": detail["quantization"]
-            } for detail in output_details
-        ]
-    }
-
-@app.post("/predict", tags=["Inference"])
-async def predict(file: UploadFile = File(...)) -> Dict[str, Any]:
-    """
-    Accepts an image, preprocesses it, runs edge INT8 model inference,
-    and returns top-K classifications with strict latency tracking.
-    """
-    start_time = time.perf_counter()
-    image_bytes = await file.read()
-
-    if interpreter is None and not ALLOW_MOCK:
-        raise HTTPException(status_code=503, detail="No TFLite model is loaded.")
-
-    # Check if we should use actual inference or mock inference
-    if interpreter is not None and np is not None and Image is not None:
-        try:
-            # Preprocess image
-            prep_start = time.perf_counter()
-            input_data = preprocess_image(image_bytes)
-            preprocess_time = (time.perf_counter() - prep_start) * 1000.0
-
-            # Run TFLite inference
-            infer_start = time.perf_counter()
-            interpreter.set_tensor(input_details[0]['index'], input_data)
-            interpreter.invoke()
-            output_data = interpreter.get_tensor(output_details[0]['index'])
-            inference_time = (time.perf_counter() - infer_start) * 1000.0
-
-            # Postprocess results
-            post_start = time.perf_counter()
-
-            # Dequantize output scores when the model exposes quantization metadata.
-            output_squeezed = np.squeeze(output_data)
-            out_scale, out_zero_point = output_details[0].get("quantization", (0.0, 0))
-            if out_scale:
-                output_squeezed = (output_squeezed.astype(np.float32) - out_zero_point) * out_scale
-
-            # Find Top-5 classes
-            top_indices = np.argsort(output_squeezed)[-5:][::-1]
-
-            predictions = []
-            for idx in top_indices:
-                prob = float(output_squeezed[idx])
-
-                label = None  # Return true indices; no verified class mapping is bundled.
-                predictions.append({
-                    "class_idx": int(idx),
-                    "label": label,
-                    "confidence": round(prob, 4)
-                })
-
-            postprocess_time = (time.perf_counter() - post_start) * 1000.0
-            total_time = (time.perf_counter() - start_time) * 1000.0
-
-            return {
-                "success": True,
-                "predictions": predictions,
-                "latency_metadata": {
-                    "preprocess_time_ms": round(preprocess_time, 2),
-                    "inference_time_ms": round(inference_time, 2),
-                    "postprocess_time_ms": round(postprocess_time, 2),
-                    "total_service_time_ms": round(total_time, 2)
-                },
-                "model_info": {
-                    "model_path": model_loaded_path,
-                    "quantization": "INT8"
-                }
-            }
-        except HTTPException:
-            raise
-        except Exception as e:
-            logger.error(f"Inference pipeline execution failure: {e}")
-            if not ALLOW_MOCK:
-                raise HTTPException(status_code=500, detail="Inference execution failed.") from e
-            logger.warning("Inference failed; returning explicitly enabled simulated fallback.")
-
-    if not ALLOW_MOCK:
-        raise HTTPException(status_code=503, detail="Inference dependencies unavailable")
-
-    # Simulated Edge Fallback Execution
-    # Sourced from Section IV of the paper, average 95 ms inference latency for INT8
-    simulated_inference_time = 95.0
-    simulated_preprocess_time = 4.2
-    simulated_postprocess_time = 1.3
-
-    # Wait to simulate edge execution latency (optional, but realistic)
-    time.sleep((simulated_inference_time + simulated_preprocess_time) / 1000.0)
-
-    # Generate mock prediction based on file content length
-    seed_idx = len(image_bytes) % len(MOCK_LABELS)
-    predictions = [
-        {"class_idx": seed_idx, "label": MOCK_LABELS[seed_idx], "confidence": 0.8412},
-        {"class_idx": (seed_idx + 1) % len(MOCK_LABELS), "label": MOCK_LABELS[(seed_idx + 1) % len(MOCK_LABELS)], "confidence": 0.0825},
-        {"class_idx": (seed_idx + 2) % len(MOCK_LABELS), "label": MOCK_LABELS[(seed_idx + 2) % len(MOCK_LABELS)], "confidence": 0.0411}
-    ]
-
-    total_time = (time.perf_counter() - start_time) * 1000.0
-
-    return {
-        "success": True,
-        "predictions": predictions,
-        "latency_metadata": {
-            "preprocess_time_ms": round(simulated_preprocess_time, 2),
-            "inference_time_ms": round(simulated_inference_time, 2),
-            "postprocess_time_ms": round(simulated_postprocess_time, 2),
-            "total_service_time_ms": round(total_time, 2)
+        "input": {
+            "shape": runtime.input_detail["shape"].tolist(),
+            "dtype": str(runtime.input_detail["dtype"]),
+            "quantization": list(runtime.input_detail["quantization"]),
         },
-        "model_info": {
-            "model_path": "emulated_edge_hardware",
-            "quantization": "INT8_EMULATED"
-        }
+        "output": {
+            "shape": runtime.output_detail["shape"].tolist(),
+            "dtype": str(runtime.output_detail["dtype"]),
+            "quantization": list(runtime.output_detail["quantization"]),
+        },
     }
 
-if __name__ == "__main__":
-    import uvicorn
-    # Sourced from edge guidelines, host on 0.0.0.0:8000 for local docker accessibility
-    logger.info("Starting edge deployment web service on http://0.0.0.0:8000")
-    uvicorn.run("deploy:app", host="0.0.0.0", port=8000, reload=False)
+
+@app.post("/predict")
+async def predict(file: UploadFile = File(...)) -> dict:
+    _require_model()
+    content = await file.read(MAX_UPLOAD_BYTES + 1)
+    if len(content) > MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=413, detail="Upload exceeds configured limit")
+
+    input_data = preprocess_image(content, runtime.input_detail)
+    started = time.perf_counter_ns()
+    with invoke_lock:
+        runtime.interpreter.set_tensor(runtime.input_detail["index"], input_data)
+        runtime.interpreter.invoke()
+        scores = runtime.interpreter.get_tensor(runtime.output_detail["index"])[0]
+    latency_ms = (time.perf_counter_ns() - started) / 1_000_000
+
+    scale, zero_point = runtime.output_detail["quantization"]
+    if scale:
+        scores = (scores.astype(np.float32) - zero_point) * scale
+    top_indices = np.argsort(scores)[-5:][::-1]
+    return {
+        "predictions": [
+            {"class_index": int(index), "score": round(float(scores[index]), 6)}
+            for index in top_indices
+        ],
+        "inference_ms": round(latency_ms, 3),
+    }

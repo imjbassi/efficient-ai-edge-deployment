@@ -1,24 +1,33 @@
-% paper/03_benchmarks.tex
-\section{Benchmarks and Evaluation}
+\section{Results}
+\label{sec:results}
 
-\subsection{Experimental Setup and Baselines}
-To rigorously evaluate the superiority of our proposed pipeline, we benchmark the optimized models against three distinct configurations:
-\begin{itemize}
-    \item \textbf{Unoptimized Baseline:} The full-precision (FP32) model without any pruning or quantization applied.
-    \item \textbf{TensorFlow Lite (TFLite):} The model optimized using standard TFLite INT8 post-training quantization, representing a standard CPU-centric edge deployment.
-    \item \textbf{NVIDIA TensorRT:} The model optimized using TensorRT with FP16 and INT8 precision profiles, representing the industry standard for GPU-accelerated edge inference.
-\end{itemize}
-Evaluations are conducted on low-power CPUs (Raspberry Pi 4B) and embedded GPU boards (NVIDIA Jetson Nano). We evaluate using the standard MobileNetV2 architecture on the ImageNet validation dataset.
+Table~\ref{tab:results} reports the complete validation and host-latency experiment. The FP32 model is 13.34 MiB and the INT8 model is 3.81 MiB, a 71.5\% reduction or 3.50$\times$ compression. Mean latency decreases by 24.3\%, from 8.53 to 6.46 ms, corresponding to a 1.32$\times$ speedup. The median and 90th-percentile values show the same direction.
 
-\subsection{Performance Metrics: Latency, Throughput, and Accuracy}
-As detailed in Table~\ref{tab:performance}, the proposed pipeline achieves a 4x reduction in overall model size. On the target edge devices, inference throughput increased by up to 70\% compared to the unoptimized model. Crucially, our hardware-aware approach outperformed the TFLite baseline by 14\% in raw throughput on the Raspberry Pi 4B, and outperformed TensorRT's default INT8 engine by 9\% on the Jetson Nano due to better memory migration scheduling. 
+\begin{table}[t]
+\centering
+\caption{Measured MobileNetV2 results. Accuracy uses all 3,925 Imagenette validation images; latency uses 500 images after 50 warm-ups.}
+\label{tab:results}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lrr}
+\toprule
+\textbf{Metric} & \textbf{FP32} & \textbf{INT8}\\
+\midrule
+Model size (MiB) & 13.34 & 3.81\\
+Top-1 accuracy (\%) & 66.73 & 65.81\\
+Top-5 accuracy (\%) & 90.75 & 89.81\\
+Mean latency (ms) & 8.53 & 6.46\\
+Median latency (ms) & 8.14 & 6.30\\
+90th-percentile latency (ms) & 9.88 & 7.29\\
+Latency standard deviation (ms) & 1.62 & 1.25\\
+Throughput from mean (images/s) & 117.2 & 154.8\\
+\bottomrule
+\end{tabular}
+\end{table}
 
-This speedup was achieved while maintaining strict accuracy thresholds: our optimized MobileNet variant exhibited a Top-1 accuracy drop of exactly 1.2\% (from 71.8\% to 70.6\%), compared to a 1.9\% degradation observed when using standard TFLite INT8 quantization.
+The top-1 accuracy difference is 0.92 percentage points. FP32 top-1 accuracy has a Wilson 95\% interval of 65.24--68.18\%; INT8 has an interval of 64.31--67.28\%. Top-5 accuracy changes by 0.94 percentage points, from 90.75\% to 89.81\%. These results indicate that the calibrated integer model closely tracks the floating-point model on this subset, while the overlapping intervals caution against interpreting the observed difference as a general ImageNet accuracy estimate.
 
-\subsection{Energy Efficiency and Thermal Impact}
-Given the severe power constraints of edge inference, we measure sustained power draw (in Watts) and thermal output (in $^\circ$C) during a continuous 60-minute workload. We utilize NVIDIA Nsight Systems for granular performance profiling, tracing the exact execution time and power states of the hardware to ensure thermal limits are strictly maintained.
+\subsection{Reproducibility and limitations}
 
-\begin{itemize}
-    \item \textbf{Power Draw:} Our containerized pipeline reduced the average active power draw during continuous inference from 6.8W (unoptimized baseline) to 4.2W. This also represents a notable 12\% improvement in energy efficiency over the TensorRT baseline (4.8W), primarily due to our reduction in redundant CPU-to-GPU memory copies.
-    \item \textbf{Thermal Throttling:} Over the 60-minute stress test, the peak System-on-Chip (SoC) temperature reached 65$^\circ$C using our methodology, remaining safely below the 80$^\circ$C hardware thermal throttling threshold. In contrast, the unoptimized baseline triggered thermal throttling within 14 minutes, and the TFLite CPU implementation triggered throttling at the 42-minute mark, severely degrading sustained throughput.
-\end{itemize}
+The result JSON stores all 500 raw latency observations, per-class accuracy counts, model hashes, runtime versions, dataset hash, calibration count and seed, preprocessing, and thread settings. The experiment can therefore be repeated or reanalyzed without transcribing values from the manuscript.
+
+Three limits constrain interpretation. First, Imagenette covers only ten ImageNet classes, so the accuracy estimate does not replace evaluation on the 50,000-image ImageNet validation set. Second, the latency result describes one x86-64 host and one thread. ARM CPUs and accelerators may produce different speedups. Third, preprocessing, HTTP transport, resident memory, container overhead, temperature, and power are outside the timed region. Claims about those quantities require separate, synchronized measurements on each target device.

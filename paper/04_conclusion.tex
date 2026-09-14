@@ -1,5 +1,10 @@
 \section{Conclusion}
 \label{sec:conclusion}
-The implementation connects MobileNetV2 conversion, optional pruning, TFLite inference, FastAPI serving, and Docker packaging. Its reference profile provides an illustrative comparison; it does not establish physical performance, accuracy preservation, or accelerator speedup.
 
-An empirical submission requires a documented calibration and validation set, model and dataset hashes, raw timing and memory logs from named devices, synchronized power measurements, and a controlled container-overhead experiment. Pruning must be evaluated after training with the appropriate callbacks. The current live benchmark is a host diagnostic using synthetic inputs; it compares different backends and retains both models in one process, so it cannot isolate the effects of precision or model memory. These limitations define the next experimental steps for validating the deployment pipeline.
+This study turns an edge-deployment concept into a reproducible conversion, evaluation, and serving artifact. Full-integer quantization compressed MobileNetV2 by 3.50$\times$ and improved single-thread host inference by 1.32$\times$ while changing top-1 accuracy by less than one percentage point on the full Imagenette validation split. The result supports the engineering value of calibrated INT8 conversion under a controlled host protocol.
+
+The next empirical step is deployment on named ARM edge devices using the same model hashes and inputs. That study should isolate native inference from HTTP and container overhead, measure process memory in separate runs, and collect synchronized wall-power and temperature traces. The present repository supplies the model artifacts, dataset checksum, raw timings, and service needed to conduct that extension.
+
+\section*{Data and Code Availability}
+
+Source code, model artifacts, test configuration, and machine-readable results are available at \url{https://github.com/imjbassi/efficient-ai-edge-deployment}. Imagenette is downloaded from the official fastai distribution and verified before extraction.

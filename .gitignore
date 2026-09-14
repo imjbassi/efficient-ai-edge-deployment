@@ -22,6 +22,9 @@ paper/*.bbl
 paper/*.blg
 paper/*.synctex.gz
 tmp/
+data/
+models/*.h5
+results/*.tmp
 output/pdf/*.log
 output/pdf/*.aux
 output/pdf/*.bbl

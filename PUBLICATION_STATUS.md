@@ -1,21 +1,19 @@
 # Publication status
 
-The revised PDF in `output/pdf/main.pdf` compiles in IEEE conference layout. It is an engineering reference manuscript with illustrative results, not a validated empirical study. The previous claim that it was fully publication-ready was too strong.
+The repository is ready to publish as a reproducible research artifact and preprint. The manuscript compiles, its headline values are backed by the checked-in machine-readable result, both evaluated model binaries are versioned with hashes, the serving path is tested, and the project has citation metadata, an MIT license, continuous integration, pinned environments, and a hardened container configuration.
 
-The original draft's author name, email, and Grand Canyon University affiliation are preserved. Confirm the affiliation and the target venue's submission format before submitting.
+## Evidence included
 
-## Remaining work for an empirical submission
+- Full 3,925-image Imagenette validation evaluation for FP32 and INT8 models.
+- Deterministic 200-image calibration selection and checksum-verified dataset acquisition.
+- Five hundred raw latency samples per model after 50 warm-ups.
+- CPU, runtime, thread count, preprocessing, confidence intervals, and artifact hashes.
+- Reproducible TFLite binaries and a service that uses matching preprocessing.
 
-- Supply representative calibration images and a labeled evaluation set with access instructions and hashes; no ImageNet evaluation was run.
-- Export and archive actual model artifacts; execute pruning training with callbacks if pruning results will be claimed.
-- Collect raw measurements on the named edge devices, including repeated runs, software versions, thread settings and thermal conditions.
-- Measure power with an identified meter and provide synchronized traces before reporting energy efficiency.
-- Compare identical backends/models across native and container serving with matched inputs to isolate container overhead.
-- Choose a venue and assess novelty: combining existing quantization, serving, and packaging tools alone does not establish a new compression method.
-- Select a repository license before advertising unrestricted reuse; no license has been invented on the author's behalf.
+## Claims deliberately excluded
 
-## Validation scope
+The paper does not claim Raspberry Pi, Jetson, Coral, ARM, accelerator, power, thermal, memory, HTTP, or container-overhead performance. It also does not present pruning results or treat Imagenette accuracy as a replacement for full ImageNet evaluation.
 
-PDF compilation and visual review, Python syntax checks, explicit-emulation benchmark execution, failed-live-run behavior, and service regression tests are checked locally. Tests cover normalized integer inputs, unavailable models, invalid image handling, and output scores with a stub interpreter. These checks do not validate real TensorFlow conversion, actual edge latency, classification accuracy, or a Docker image on ARM hardware.
+## Remaining submission choices
 
-The compiled PDF and sources are committed together. Build dependencies, virtual environments, preview images, and temporary logs remain local under ignored paths.
+No engineering blocker remains for a public repository or preprint release. A formal venue submission still requires the author's choice of venue, its required template and page limit, anonymization if applicable, author-affiliation confirmation, and any venue-specific disclosure or artifact forms. Extending the claims to named edge devices requires running the checked-in model hashes and protocol on those devices.
