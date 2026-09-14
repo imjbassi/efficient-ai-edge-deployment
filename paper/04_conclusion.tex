@@ -1,13 +1,13 @@
 \section{Conclusion}
 \label{sec:conclusion}
 
-INT8 was reliably smaller, but it was not intrinsically faster or accurate. In this MobileNetV2 audit, per-channel quantization delivered useful accuracy and a 1.27$\times$ one-thread XNNPACK speedup, while per-tensor quantization destroyed accuracy and TensorFlow Lite's built-in counterfactual made INT8 slower than FP32. The result replaces a blanket ``quantization accelerates inference'' narrative with a testable deployment rule: validate the model's granularity and benchmark the exact backend, thread policy, and serving boundary that will run in production.
+INT8 was reliably smaller, but it was not intrinsically faster or accurate. In this MobileNetV2 audit, per-channel quantization delivered useful accuracy and a 1.27$\times$ one-thread XNNPACK speedup, while per-tensor quantization destroyed accuracy and TensorFlow Lite's built-in counterfactual made INT8 slower than FP32. The packaged artifact then exposed the rule in practice: its deployed INT8 graph received zero XNNPACK partitions. The result replaces a blanket ``quantization accelerates inference'' narrative with a testable deployment rule: validate the model's granularity and benchmark the exact backend, thread policy, and serving boundary that will run in production.
 
 The repository turns that rule into a repeatable audit. It retains per-image paired predictions, process-level latency replicates, raw request timings, hashes, host controls, a hardened container, and the scripts that generated the tables and figure. Stronger external validity now requires replication across additional architectures, full ImageNet, native ARM systems, and energy-controlled edge hardware rather than additional claims from the present host.
 
 \section*{Data and Code Availability}
 
-Source code, model artifacts, experiment scripts, and machine-readable results are available in the tagged release at \url{https://github.com/imjbassi/efficient-ai-edge-deployment/releases/tag/v1.1.0}. Repository-authored code and documentation use the MIT license; TensorFlow/Keras use Apache-2.0. Converted pretrained parameters are not relicensed by the artifact, and Imagenette is downloaded from fastai, verified by its full archive SHA-256, and remains subject to ImageNet terms.
+Source code, model artifacts, experiment scripts, and machine-readable results are available in the tagged release at \url{https://github.com/imjbassi/efficient-ai-edge-deployment/releases/tag/v1.2.0}. Repository-authored code and documentation use the MIT license; TensorFlow/Keras use Apache-2.0. Converted pretrained parameters are not relicensed by the artifact, and Imagenette is downloaded from fastai, verified by its full archive SHA-256, and remains subject to ImageNet terms.
 
 \section*{Author Contributions}
 

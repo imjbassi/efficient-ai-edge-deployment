@@ -8,7 +8,7 @@ The repository is ready for public release as a reproducible research artifact a
 - Per-channel and per-tensor INT8 controls generated from the same graph and 200-image calibration set.
 - Twenty fresh-process latency replicates per configuration across backends, 1/2/4/6 threads, and batch 1/4, with raw timings and host controls.
 - Prediction-distribution and depthwise-channel-range evidence for the per-tensor numerical collapse.
-- Twenty container cold starts, 200 localhost HTTP requests, measured server-stage decomposition, compressed and uncompressed image-size controls, RSS, runtime identity, and enforced resource limits.
+- Twenty container cold starts, 200 localhost HTTP requests, measured server-stage decomposition, a matched 500-image direct-container control with delegated-op evidence, compressed and uncompressed image-size controls, RSS, runtime identity, and enforced resource limits.
 - Full dataset digest, reproducible TFLite binaries, figure-generation code, manuscript source, compiled PDF, and continuous integration.
 
 ## Scope and limitations

@@ -2,6 +2,7 @@
   "title": "When Does INT8 Actually Accelerate Host-CPU Inference? A Reproducible Audit of MobileNetV2 Conversion and Packaging",
   "description": "Versioned code, converted model artifacts, machine-readable measurements, and manuscript for a host-CPU audit of MobileNetV2 TensorFlow Lite quantization and container packaging. Repository-authored code and documentation are MIT-licensed; converted parameters and dataset inputs remain subject to the third-party notices in the archive.",
   "upload_type": "software",
+  "version": "1.2.0",
   "creators": [
     {
       "name": "Bassi, Jaiveer",
