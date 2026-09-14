@@ -1,6 +1,6 @@
 cff-version: 1.2.0
 message: "If you use this repository or manuscript, please cite it as follows."
-title: "Efficient Packaging and Deployment of AI Models for Edge Inference"
+title: "When Does INT8 Actually Accelerate Edge Inference? A Reproducible Audit of MobileNetV2 Conversion and Packaging"
 authors:
   - family-names: Bassi
     given-names: Jaiveer
@@ -10,5 +10,6 @@ version: 1.0.0
 type: software
 repository-code: "https://github.com/imjbassi/efficient-ai-edge-deployment"
 abstract: >-
-  A reproducible MobileNetV2 FP32-to-INT8 conversion, Imagenette evaluation,
-  single-thread CPU benchmark, FastAPI service, and container deployment artifact.
+  A reproducible audit of MobileNetV2 TensorFlow Lite accuracy, latency, and
+  packaging across quantization granularity, CPU delegates, thread counts,
+  process restarts, and container serving.

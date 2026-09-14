@@ -1,26 +1,28 @@
 \section{Methodology}
 \label{sec:methodology}
 
-\subsection{Model conversion}
+\subsection{Models and quantization controls}
 
-The source model is MobileNetV2 with ImageNet weights and a $224\times224\times3$ input. TensorFlow 2.15.1 exports the same SavedModel graph twice. The first conversion retains FP32 tensors. The second enables default optimization, restricts operators to the built-in INT8 set, and requests signed INT8 inputs and outputs. A representative dataset of 200 training images calibrates activation ranges. For scale $S$, zero point $Z$, and integer bounds $q_{\min}$ and $q_{\max}$, an input value $x$ is mapped as
+The source model is MobileNetV2 with ImageNet weights and a $224\times224\times3$ input. TensorFlow 2.15.1 exports the same graph as FP32 and as signed full-integer TFLite. The primary INT8 conversion uses per-channel weight scales; a control disables per-channel quantization. Both use 200 deterministically selected training images to calibrate activation ranges, restrict operators to the built-in INT8 set, and request signed INT8 inputs and outputs. For scale $S$, zero point $Z$, and integer bounds $q_{\min}$ and $q_{\max}$, an input value $x$ is mapped as
 \begin{equation}
 q=\operatorname{clip}(\operatorname{round}(x/S)+Z,q_{\min},q_{\max}).
 \end{equation}
-Both conversion outputs are retained with SHA-256 hashes.
+All three outputs are retained with SHA-256 hashes. Tensor metadata verify that the control has at most one scale per tensor, while the primary model contains 104 tensors with multiple scales.
 
-Pruning is outside the reported pipeline. No pruning accuracy or speed claim is made.
+\subsection{Dataset and paired accuracy protocol}
 
-\subsection{Dataset and accuracy protocol}
+Imagenette is a ten-class subset of ImageNet containing tench, English springer, cassette player, chain saw, church, French horn, garbage truck, gas pump, golf ball, and parachute \cite{imagenette}. The 160-pixel distribution contains 9,470 training and 3,925 validation images. Its archive SHA-256 is \nolinkurl{64d0c4859f35a461889e0147755a999a48b49bf38a7e0f9bd27003f10db02fe5}. Calibration images are selected from the training split with seed 20260914. All validation images are evaluated.
 
-Imagenette is a ten-class subset of ImageNet containing tench, English springer, cassette player, chain saw, church, French horn, garbage truck, gas pump, golf ball, and parachute \cite{imagenette}. The 160-pixel distribution contains 9,470 training and 3,925 validation images. Its archive is identified by SHA-256 digest \texttt{64d0c485...db02fe5}. Calibration images are selected from the training split with seed 20260914. All validation images are evaluated.
+Each image is converted to RGB, resized so its shortest side is 256 pixels, center-cropped to $224\times224$, and scaled to $[-1,1]$. Predicted indices are compared with the corresponding ImageNet class indices. Because FP32 and INT8 see the same images, the primary comparison is paired. We report the discordant counts, the exact two-sided McNemar test \cite{mcnemar1947}, and a percentile interval for the accuracy difference from 100,000 paired bootstrap resamples with seed 20260914 \cite{efron1979}. Marginal Wilson intervals remain in the machine-readable results but are not used to test a difference. This is a conversion-fidelity study on an ImageNet subset, not an Imagenette training benchmark.
 
-Each image is converted to RGB, resized so its shortest side is 256 pixels, center-cropped to $224\times224$, and scaled to $[-1,1]$. Predicted indices are compared with the corresponding ImageNet class indices. We report top-1 and top-5 accuracy and Wilson 95\% confidence intervals. The use of ImageNet-pretrained weights means this experiment evaluates conversion fidelity on an ImageNet subset; it is not an Imagenette training benchmark.
+\subsection{Repeated-process latency protocol}
 
-\subsection{Latency protocol}
+Latency is measured on an AMD Ryzen 5 7600 (6 physical/12 logical cores) running Microsoft Windows 24H2, build 26100.9278, and TensorFlow 2.15.1 with oneDNN disabled. Every replicate starts a fresh process and interpreter, uses 50 untimed warm-ups, then times 500 deterministically shuffled images with a monotonic nanosecond clock; the slower built-in-kernel condition uses 100 images. Preprocessing is excluded. Five matched replicates alternate FP32/INT8 order within deterministically shuffled configuration blocks. Benchmark processes use above-normal priority and physical-core-spaced affinity. Docker Desktop is stopped, the Windows Balanced power plan is active, and interactive applications remain open. Pre-interpreter host CPU load is retained for each run.
 
-Latency is measured with TensorFlow Lite's XNNPACK CPU delegate on an AMD Ryzen 5 7600 running Windows build 26100. One interpreter thread is used, oneDNN graph optimizations are disabled, and preprocessing is excluded. After 50 untimed warm-up invocations, 500 deterministically shuffled validation inputs are timed individually with a monotonic nanosecond clock. The paper reports mean, median, 90th percentile, standard deviation, and throughput computed as the reciprocal of mean latency.
+The controls cross XNNPACK thread counts $\{1,2,4,6\}$, XNNPACK versus built-in kernels at one thread, and batch one versus batch four. A per-tensor INT8 latency control is also run. For each model we report the mean of five process means with a two-sided Student-$t$ 95\% interval. For matched FP32/INT8 pairs we report the geometric mean of replicate speedup ratios and a $t$ interval in log space.
 
-\subsection{Serving and packaging}
+\subsection{Serving and packaging protocol}
 
-The FastAPI service loads \texttt{models/mobilenet\_v2\_int8.tflite}, validates upload size and image decoding, applies the evaluation resize, crop, and scaling procedure, quantizes according to tensor metadata, serializes interpreter access with a lock, and exposes health and metadata endpoints. Missing models return HTTP 503. The container runs as a non-root user with CPU and memory ceilings. These controls define deployment behavior; they are not treated as Raspberry Pi, Jetson, power, or container-overhead measurements.
+The FastAPI service loads the per-channel INT8 model, validates uploads, applies the same preprocessing, reads quantization parameters from tensor metadata, serializes interpreter access, and exposes health and metadata endpoints. Docker Desktop 4.91.0 (Engine 29.8.0, Compose 5.5.1) runs the Linux/amd64 image on the Windows host as UID 10001 with a read-only root filesystem, 512 MiB memory ceiling, and two-CPU ceiling.
+
+Packaging is measured separately from native inference. Image size is Docker's uncompressed layer size. Five cold-start samples measure host wall time from \texttt{compose up} to the first successful health response. After 20 warm-up requests, 200 sequential localhost \texttt{/predict} requests measure end-to-end HTTP latency. Resident set size is sampled after those requests. The request input and all raw observations are retained.

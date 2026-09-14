@@ -1,33 +1,82 @@
 \section{Results}
 \label{sec:results}
 
-Table~\ref{tab:results} reports the complete validation and host-latency experiment. The FP32 model is 13.34 MiB and the INT8 model is 3.81 MiB, a 71.5\% reduction or 3.50$\times$ compression. Mean latency decreases by 24.3\%, from 8.53 to 6.46 ms, corresponding to a 1.32$\times$ speedup. The median and 90th-percentile values show the same direction.
+\begin{figure*}[t]
+\centering
+\includegraphics[width=0.92\textwidth]{figures/latency_audit.pdf}
+\caption{Latency audit. (a) Pooled one-thread XNNPACK empirical CDFs contain 2,500 observations per precision from five process restarts. (b) Points are paired geometric-mean FP32/INT8 speedups; bars are log-$t$ 95\% intervals across five matched process means. Values above one favor INT8.}
+\label{fig:latency}
+\end{figure*}
+
+\subsection{Accuracy depends on granularity}
+
+Table~\ref{tab:accuracy} shows that per-channel INT8 retained most FP32 accuracy while reducing storage from 13.34 to 3.81 MiB (71.5\%). The top-1 comparison is not merely two overlapping marginal intervals: among the same 3,925 images, 125 were correct only for FP32 and 89 only for INT8. The resulting $-0.92$ percentage-point difference has paired bootstrap 95\% CI $[-1.66,-0.18]$ and exact McNemar $p=.0165$. Top-5 changed by $-0.94$ points (76 FP32-only versus 39 INT8-only; CI $[-1.48,-0.41]$; $p=.00072$).
+
+The per-tensor control was 10.2\% smaller than per-channel INT8 but achieved only 1.04\% top-1 and 3.95\% top-5 accuracy. Since its one-thread XNNPACK latency (7.96 ms; 95\% CI $[7.53,8.39]$) was close to per-channel INT8, the failure is numerical rather than a latency tradeoff. Quantization granularity is therefore part of model correctness, not a packaging detail.
 
 \begin{table}[t]
 \centering
-\caption{Measured MobileNetV2 results. Accuracy uses all 3,925 Imagenette validation images; latency uses 500 images after 50 warm-ups.}
-\label{tab:results}
+\caption{Model size and Imagenette accuracy ($n=3{,}925$).}
+\label{tab:accuracy}
 \setlength{\tabcolsep}{4pt}
-\begin{tabular}{lrr}
+\begin{tabular}{lrrr}
 \toprule
-\textbf{Metric} & \textbf{FP32} & \textbf{INT8}\\
+\textbf{Model} & \textbf{MiB} & \textbf{Top-1} & \textbf{Top-5}\\
 \midrule
-Model size (MiB) & 13.34 & 3.81\\
-Top-1 accuracy (\%) & 66.73 & 65.81\\
-Top-5 accuracy (\%) & 90.75 & 89.81\\
-Mean latency (ms) & 8.53 & 6.46\\
-Median latency (ms) & 8.14 & 6.30\\
-90th-percentile latency (ms) & 9.88 & 7.29\\
-Latency standard deviation (ms) & 1.62 & 1.25\\
-Throughput from mean (images/s) & 117.2 & 154.8\\
+FP32 & 13.34 & 66.73\% & 90.75\%\\
+INT8, per-channel & 3.81 & 65.81\% & 89.81\%\\
+INT8, per-tensor & 3.42 & 1.04\% & 3.95\%\\
 \bottomrule
 \end{tabular}
 \end{table}
 
-The top-1 accuracy difference is 0.92 percentage points. FP32 top-1 accuracy has a Wilson 95\% interval of 65.24--68.18\%; INT8 has an interval of 64.31--67.28\%. Top-5 accuracy changes by 0.94 percentage points, from 90.75\% to 89.81\%. These results indicate that the calibrated integer model closely tracks the floating-point model on this subset, while the overlapping intervals caution against interpreting the observed difference as a general ImageNet accuracy estimate.
+\subsection{Speedup depends on the execution backend}
 
-\subsection{Reproducibility and limitations}
+The one-thread XNNPACK condition is the primary latency comparison. FP32 and per-channel INT8 mean-of-run-means were 10.72 ms (95\% CI $[9.79,11.65]$) and 7.55 ms ($[6.18,8.91]$), respectively. Matched run ratios yield a 1.43$\times$ geometric-mean speedup ($[1.18,1.73]$). The pooled empirical distributions in Fig.~\ref{fig:latency} show substantial jitter; inference-level samples characterize tails, while the interval is deliberately computed across process-level means.
 
-The result JSON stores all 500 raw latency observations, per-class accuracy counts, model hashes, runtime versions, dataset hash, calibration count and seed, preprocessing, and thread settings. The experiment can therefore be repeated or reanalyzed without transcribing values from the manuscript.
+Table~\ref{tab:latency} demonstrates that this result does not extrapolate to a universal multiplier. XNNPACK speedups range from 1.27$\times$ to 1.43$\times$ across thread counts, and the four-thread interval crosses unity. Batch four does not materially reduce per-image latency. Most importantly, disabling default delegates reverses the result: built-in FP32 averages 34.81 ms and built-in INT8 averages 77.42 ms, making INT8 2.22$\times$ slower. Thus, the optimized kernel path---not the file's nominal bit width---determines whether the conversion accelerates inference. This observation is consistent with benchmark literature that treats software stacks and hardware as first-class experimental variables \cite{reddi2020mlperf,reddi2020mobile,banbury2021mlperf}.
 
-Three limits constrain interpretation. First, Imagenette covers only ten ImageNet classes, so the accuracy estimate does not replace evaluation on the 50,000-image ImageNet validation set. Second, the latency result describes one x86-64 host and one thread. ARM CPUs and accelerators may produce different speedups. Third, preprocessing, HTTP transport, resident memory, container overhead, temperature, and power are outside the timed region. Claims about those quantities require separate, synchronized measurements on each target device.
+\begin{table}[t]
+\centering
+\caption{Matched latency controls. Means are milliseconds per image across five fresh processes; speedup is FP32/INT8 with paired 95\% CI.}
+\label{tab:latency}
+\setlength{\tabcolsep}{3.2pt}
+\begin{tabular}{lrrr}
+\toprule
+\textbf{Condition} & \textbf{FP32} & \textbf{INT8} & \textbf{Speedup [95\% CI]}\\
+\midrule
+XNNPACK, 1 thread & 10.72 & 7.55 & 1.43 [1.18, 1.73]\\
+XNNPACK, 2 threads & 4.82 & 3.59 & 1.34 [1.24, 1.46]\\
+XNNPACK, 4 threads & 2.27 & 1.80 & 1.27 [0.92, 1.76]\\
+XNNPACK, 6 threads & 1.95 & 1.53 & 1.28 [1.18, 1.39]\\
+Built-in, 1 thread & 34.81 & 77.42 & 0.45 [0.40, 0.51]\\
+XNNPACK, batch 4 & 10.14 & 7.57 & 1.34 [1.16, 1.56]\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Packaging is measurable}
+
+The production container is 339.58 MiB uncompressed. Across five clean starts, median time from Compose invocation to the first successful health response is 1.69 s (range 1.67--2.09 s); ready-state RSS is 65.58--65.75 MiB. After warm-up, 200 sequential localhost requests have mean 49.39 ms, p50 46.34 ms, p90 62.88 ms, and p99 71.85 ms. RSS after the request run is 77.36 MiB. These figures include image upload, decoding, preprocessing, inference, and response serialization, and therefore answer a different question than native kernel timing.
+
+\begin{table}[t]
+\centering
+\caption{Container and end-to-end serving measurements.}
+\label{tab:packaging}
+\setlength{\tabcolsep}{5pt}
+\begin{tabular}{lr}
+\toprule
+\textbf{Metric} & \textbf{Measured value}\\
+\midrule
+Uncompressed image size & 339.58 MiB\\
+Cold start, median (range) & 1.69 s (1.67--2.09)\\
+HTTP latency, p50 / p99 & 46.34 / 71.85 ms\\
+RSS after 200 requests & 77.36 MiB\\
+Runtime limits & 2 CPUs / 512 MiB\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Threats to validity}
+
+The paired accuracy inference applies to this fixed 3,925-image subset; Imagenette does not replace full ImageNet evaluation. Latency was measured on one x86-64 host, not ARM, a neural accelerator, or a battery-powered target. Interactive applications remained open and sampled pre-run CPU load varied, so process-level intervals are more credible than any single run but do not emulate an idle laboratory host. The Windows-hosted Docker measurement includes virtualization and loopback transport and should not be generalized to native Linux. Five restarts provide only four degrees of freedom, leading to visibly wide intervals. Energy, temperature, concurrent-request throughput, and multi-model generality remain unmeasured.

@@ -13,4 +13,5 @@ tmp
 *.pyc
 __pycache__
 models/mobilenet_v2_fp32.tflite
+models/mobilenet_v2_int8_per_tensor.tflite
 models/README.md
