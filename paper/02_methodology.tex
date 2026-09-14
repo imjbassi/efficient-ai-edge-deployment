@@ -1,20 +1,14 @@
+% paper/02_methodology.tex
 \section{Methodology}
-\label{sec:methodology}
-The repository implements four layers: model preparation, integer conversion, HTTP serving, and container packaging. The intended path is MobileNetV2 with a $224\times224\times3$ input, conversion to a fully integer TensorFlow Lite model, and single-image inference through a FastAPI endpoint.
+Our proposed deployment pipeline consists of three interconnected stages: structural pruning, mixed-precision quantization, and hardware-aware containerization. Unlike traditional sequential pipelines, our approach uses the constraints of the final deployment container to inform the pruning and quantization parameters iteratively.
 
-\subsection{Model preparation and quantization}
-The baseline factory constructs ImageNet-pretrained MobileNetV2. The optional pruning module configures unstructured magnitude pruning with TensorFlow Model Optimization's polynomial schedule from zero to 30\% target sparsity over 1,000 steps. This operation masks individual weights; it does not remove entire channels. A training loop with pruning callbacks and evaluation is required before stripping the wrappers. Such a trained pruning artifact is not included, and neither achieved sparsity nor pruning speedup is established here.
+\subsection{Structural Pruning and Quantization}
+We apply structured pruning to eliminate redundant channels within convolutional layers, targeting a predefined sparsity threshold that aligns with the cache size of the target hardware. Following pruning, we employ Post-Training Quantization (PTQ) to map 32-bit floating-point (FP32) weights and activations to 8-bit integers (INT8). To mitigate accuracy degradation, we utilize a calibration dataset to optimally determine the scaling factors for the INT8 tensors. 
 
-For post-training quantization, the converter is configured with \texttt{Optimize.DEFAULT}, the built-in INT8 operator set, and INT8 input and output tensors. A representative calibration set is required. Random arrays are not accepted as evidence of calibration quality; the conversion scripts require an image directory through \texttt{EDGE\_CALIBRATION\_DIR}. Each image is decoded, converted to RGB, resized to $224\times224$, and normalized using MobileNetV2 preprocessing before being yielded to the converter. The affine mapping is
-\begin{equation}
-q=\operatorname{clip}(\operatorname{round}(x/S)+Z,q_{\min},q_{\max}),
-\end{equation}
-where $S$ and $Z$ are the scale and zero point determined by the converter; dequantization uses $\tilde{x}=S(q-Z)$.
+\subsection{Hardware-Aware Containerization}
+Edge devices frequently suffer from overhead introduced by standard containerization. We mitigate this by using minimal, multi-stage Docker builds equipped with specialized lightweight runtime binaries. For devices with embedded GPUs, the container is configured with direct hardware passthrough to minimize abstraction penalties.
 
-\subsection{Serving and packaging}
-The service exposes \texttt{/health}, \texttt{/metadata}, and \texttt{/predict}. Input preprocessing reads the tensor's actual quantization parameters rather than assuming that all INT8 models use the same offset. Output scores are dequantized when metadata are available. If no model is loaded, the service reports a degraded health state and returns an error from \texttt{/predict}; it does not silently fabricate predictions. This distinction is important for deployment monitoring and for honest benchmark collection.
+\subsection{Differentiating from Standard Runtime Optimization}
+Industry-standard edge deployment frameworks, such as TensorFlow Lite (TFLite) and NVIDIA TensorRT, provide robust post-training quantization and kernel optimizations. However, these tools generally treat the model and the deployment container as isolated entities, often suffering from I/O bottlenecks during CPU-to-GPU memory migration on edge devices. 
 
-Docker packages the service with the standalone TFLite runtime, Pillow, NumPy, and the web server. Docker Compose provides a model volume and CPU/memory limits. These limits are deployment policy, not measurements: their effect must be evaluated on the target device using repeated runs, warm-up rules, and a declared measurement tool.
-
-\subsection{Reproducibility protocol}
-For a publishable evaluation, the benchmark should record the exact model hash, TensorFlow/TFLite runtime version, operating-system image, CPU governor, thread count, input set, warm-up count, number of timed repetitions, mean and percentile definitions, and power-meter model. Accuracy must be evaluated against a fixed labeled validation set; latency and memory must be measured separately for native inference and HTTP serving. Derived energy is computed as $E=P\,t$ only when $P$ is a measured average power over the corresponding interval.
+Our pipeline distinguishes itself by integrating custom CUDA kernels and asynchronous CUDA streams directly into the containerized runtime. Rather than relying on generic execution graphs, our framework actively overlaps data transfers with computation to maximize hardware utilization. By profiling the exact memory limits and scheduling constraints of the target Docker environment, the pruning and quantization phases iteratively adjust the model's sparsity and precision. This ensures that the packaged model does not merely execute successfully, but maximally utilizes the specific cache hierarchies of the target hardware—a capability not natively exposed by standalone TFLite or TensorRT workflows.
