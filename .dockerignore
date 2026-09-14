@@ -12,3 +12,5 @@ tmp
 *.pdf
 *.pyc
 __pycache__
+models/mobilenet_v2_fp32.tflite
+models/README.md

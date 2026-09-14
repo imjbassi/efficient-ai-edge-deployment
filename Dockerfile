@@ -15,10 +15,10 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY src/ ./src/
-COPY models/ ./models/
+RUN useradd --create-home --uid 10001 appuser
 
-RUN useradd --create-home --uid 10001 appuser && chown -R appuser:appuser /app
+COPY src/ ./src/
+COPY models/mobilenet_v2_int8.tflite ./models/mobilenet_v2_int8.tflite
 USER appuser
 
 # Expose the API port

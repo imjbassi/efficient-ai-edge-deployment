@@ -9,6 +9,8 @@ The repository is ready to publish as a reproducible research artifact and prepr
 - Five hundred raw latency samples per model after 50 warm-ups.
 - CPU, runtime, thread count, preprocessing, confidence intervals, and artifact hashes.
 - Reproducible TFLite binaries and a service that uses matching preprocessing.
+- Successful Linux/amd64 container build and smoke test covering health, metadata,
+  real-image inference, non-root execution, resource limits, and read-only storage.
 
 ## Claims deliberately excluded
 
