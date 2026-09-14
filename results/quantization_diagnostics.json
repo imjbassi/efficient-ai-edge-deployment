@@ -1,0 +1,1269 @@
+{
+  "schema_version": 1,
+  "interpretation": "The same preprocessing and evaluator are used for both INT8 models. The per-tensor control has signed INT8 I/O and no multi-scale tensors; the per-channel model exposes large within-layer channel-range ratios.",
+  "models": {
+    "per_channel": {
+      "path": "models/mobilenet_v2_int8.tflite",
+      "sha256": "ea1a077a43691c77c224d473cb30ca637733adc219df994e74973b98e0b66167",
+      "inventory": {
+        "tensor_count": 182,
+        "tensors_with_multiple_scales": 104,
+        "maximum_scales_per_tensor": 1280,
+        "input_dtype": "<class 'numpy.int8'>",
+        "output_dtype": "<class 'numpy.int8'>"
+      }
+    },
+    "per_tensor": {
+      "path": "models/mobilenet_v2_int8_per_tensor.tflite",
+      "sha256": "38ca72c6abce6ad9cef394478a1cb13308e731564ab0ddd8c96591f748e2c7cb",
+      "inventory": {
+        "tensor_count": 182,
+        "tensors_with_multiple_scales": 0,
+        "maximum_scales_per_tensor": 1,
+        "input_dtype": "<class 'numpy.int8'>",
+        "output_dtype": "<class 'numpy.int8'>"
+      }
+    }
+  },
+  "per_tensor_prediction_distribution": {
+    "samples": 3925,
+    "unique_top1_classes": 187,
+    "entropy_bits": 5.1096731341058295,
+    "maximum_possible_entropy_bits": 9.965784284662087,
+    "dominant_class_fraction": 0.1961783439490446,
+    "mean_maximum_output_score": 0.2904329219745223,
+    "top1_histogram": [
+      {
+        "class_index": 772,
+        "count": 770,
+        "fraction": 0.1961783439490446
+      },
+      {
+        "class_index": 885,
+        "count": 456,
+        "fraction": 0.11617834394904458
+      },
+      {
+        "class_index": 677,
+        "count": 312,
+        "fraction": 0.07949044585987261
+      },
+      {
+        "class_index": 340,
+        "count": 203,
+        "fraction": 0.051719745222929936
+      },
+      {
+        "class_index": 783,
+        "count": 180,
+        "fraction": 0.045859872611464965
+      },
+      {
+        "class_index": 608,
+        "count": 176,
+        "fraction": 0.04484076433121019
+      },
+      {
+        "class_index": 904,
+        "count": 134,
+        "fraction": 0.03414012738853503
+      },
+      {
+        "class_index": 794,
+        "count": 119,
+        "fraction": 0.030318471337579617
+      },
+      {
+        "class_index": 512,
+        "count": 107,
+        "fraction": 0.027261146496815287
+      },
+      {
+        "class_index": 464,
+        "count": 76,
+        "fraction": 0.019363057324840765
+      },
+      {
+        "class_index": 477,
+        "count": 71,
+        "fraction": 0.018089171974522294
+      },
+      {
+        "class_index": 488,
+        "count": 55,
+        "fraction": 0.014012738853503185
+      },
+      {
+        "class_index": 616,
+        "count": 52,
+        "fraction": 0.013248407643312102
+      },
+      {
+        "class_index": 845,
+        "count": 44,
+        "fraction": 0.011210191082802547
+      },
+      {
+        "class_index": 858,
+        "count": 44,
+        "fraction": 0.011210191082802547
+      },
+      {
+        "class_index": 714,
+        "count": 44,
+        "fraction": 0.011210191082802547
+      },
+      {
+        "class_index": 815,
+        "count": 37,
+        "fraction": 0.009426751592356689
+      },
+      {
+        "class_index": 506,
+        "count": 37,
+        "fraction": 0.009426751592356689
+      },
+      {
+        "class_index": 646,
+        "count": 36,
+        "fraction": 0.009171974522292993
+      },
+      {
+        "class_index": 489,
+        "count": 34,
+        "fraction": 0.008662420382165605
+      },
+      {
+        "class_index": 626,
+        "count": 34,
+        "fraction": 0.008662420382165605
+      },
+      {
+        "class_index": 879,
+        "count": 31,
+        "fraction": 0.007898089171974522
+      },
+      {
+        "class_index": 84,
+        "count": 30,
+        "fraction": 0.007643312101910828
+      },
+      {
+        "class_index": 539,
+        "count": 29,
+        "fraction": 0.007388535031847133
+      },
+      {
+        "class_index": 606,
+        "count": 28,
+        "fraction": 0.0071337579617834395
+      },
+      {
+        "class_index": 497,
+        "count": 28,
+        "fraction": 0.0071337579617834395
+      },
+      {
+        "class_index": 79,
+        "count": 26,
+        "fraction": 0.006624203821656051
+      },
+      {
+        "class_index": 753,
+        "count": 25,
+        "fraction": 0.006369426751592357
+      },
+      {
+        "class_index": 69,
+        "count": 25,
+        "fraction": 0.006369426751592357
+      },
+      {
+        "class_index": 78,
+        "count": 24,
+        "fraction": 0.006114649681528662
+      },
+      {
+        "class_index": 828,
+        "count": 19,
+        "fraction": 0.004840764331210191
+      },
+      {
+        "class_index": 600,
+        "count": 18,
+        "fraction": 0.0045859872611464965
+      },
+      {
+        "class_index": 591,
+        "count": 16,
+        "fraction": 0.004076433121019108
+      },
+      {
+        "class_index": 553,
+        "count": 16,
+        "fraction": 0.004076433121019108
+      },
+      {
+        "class_index": 741,
+        "count": 16,
+        "fraction": 0.004076433121019108
+      },
+      {
+        "class_index": 784,
+        "count": 14,
+        "fraction": 0.0035668789808917197
+      },
+      {
+        "class_index": 457,
+        "count": 13,
+        "fraction": 0.0033121019108280254
+      },
+      {
+        "class_index": 911,
+        "count": 13,
+        "fraction": 0.0033121019108280254
+      },
+      {
+        "class_index": 906,
+        "count": 13,
+        "fraction": 0.0033121019108280254
+      },
+      {
+        "class_index": 869,
+        "count": 13,
+        "fraction": 0.0033121019108280254
+      },
+      {
+        "class_index": 109,
+        "count": 12,
+        "fraction": 0.003057324840764331
+      },
+      {
+        "class_index": 632,
+        "count": 12,
+        "fraction": 0.003057324840764331
+      },
+      {
+        "class_index": 481,
+        "count": 12,
+        "fraction": 0.003057324840764331
+      },
+      {
+        "class_index": 674,
+        "count": 12,
+        "fraction": 0.003057324840764331
+      },
+      {
+        "class_index": 588,
+        "count": 11,
+        "fraction": 0.002802547770700637
+      },
+      {
+        "class_index": 712,
+        "count": 11,
+        "fraction": 0.002802547770700637
+      },
+      {
+        "class_index": 711,
+        "count": 11,
+        "fraction": 0.002802547770700637
+      },
+      {
+        "class_index": 709,
+        "count": 11,
+        "fraction": 0.002802547770700637
+      },
+      {
+        "class_index": 707,
+        "count": 11,
+        "fraction": 0.002802547770700637
+      },
+      {
+        "class_index": 76,
+        "count": 10,
+        "fraction": 0.0025477707006369425
+      },
+      {
+        "class_index": 844,
+        "count": 10,
+        "fraction": 0.0025477707006369425
+      },
+      {
+        "class_index": 841,
+        "count": 9,
+        "fraction": 0.0022929936305732482
+      },
+      {
+        "class_index": 292,
+        "count": 9,
+        "fraction": 0.0022929936305732482
+      },
+      {
+        "class_index": 636,
+        "count": 9,
+        "fraction": 0.0022929936305732482
+      },
+      {
+        "class_index": 566,
+        "count": 9,
+        "fraction": 0.0022929936305732482
+      },
+      {
+        "class_index": 502,
+        "count": 9,
+        "fraction": 0.0022929936305732482
+      },
+      {
+        "class_index": 281,
+        "count": 8,
+        "fraction": 0.002038216560509554
+      },
+      {
+        "class_index": 787,
+        "count": 8,
+        "fraction": 0.002038216560509554
+      },
+      {
+        "class_index": 868,
+        "count": 8,
+        "fraction": 0.002038216560509554
+      },
+      {
+        "class_index": 443,
+        "count": 8,
+        "fraction": 0.002038216560509554
+      },
+      {
+        "class_index": 749,
+        "count": 7,
+        "fraction": 0.0017834394904458599
+      },
+      {
+        "class_index": 482,
+        "count": 7,
+        "fraction": 0.0017834394904458599
+      },
+      {
+        "class_index": 587,
+        "count": 7,
+        "fraction": 0.0017834394904458599
+      },
+      {
+        "class_index": 884,
+        "count": 7,
+        "fraction": 0.0017834394904458599
+      },
+      {
+        "class_index": 692,
+        "count": 7,
+        "fraction": 0.0017834394904458599
+      },
+      {
+        "class_index": 750,
+        "count": 6,
+        "fraction": 0.0015286624203821656
+      },
+      {
+        "class_index": 490,
+        "count": 6,
+        "fraction": 0.0015286624203821656
+      },
+      {
+        "class_index": 770,
+        "count": 6,
+        "fraction": 0.0015286624203821656
+      },
+      {
+        "class_index": 848,
+        "count": 6,
+        "fraction": 0.0015286624203821656
+      },
+      {
+        "class_index": 498,
+        "count": 6,
+        "fraction": 0.0015286624203821656
+      },
+      {
+        "class_index": 507,
+        "count": 6,
+        "fraction": 0.0015286624203821656
+      },
+      {
+        "class_index": 971,
+        "count": 6,
+        "fraction": 0.0015286624203821656
+      },
+      {
+        "class_index": 429,
+        "count": 6,
+        "fraction": 0.0015286624203821656
+      },
+      {
+        "class_index": 310,
+        "count": 6,
+        "fraction": 0.0015286624203821656
+      },
+      {
+        "class_index": 806,
+        "count": 5,
+        "fraction": 0.0012738853503184713
+      },
+      {
+        "class_index": 293,
+        "count": 5,
+        "fraction": 0.0012738853503184713
+      },
+      {
+        "class_index": 411,
+        "count": 5,
+        "fraction": 0.0012738853503184713
+      },
+      {
+        "class_index": 530,
+        "count": 5,
+        "fraction": 0.0012738853503184713
+      },
+      {
+        "class_index": 893,
+        "count": 5,
+        "fraction": 0.0012738853503184713
+      },
+      {
+        "class_index": 581,
+        "count": 5,
+        "fraction": 0.0012738853503184713
+      },
+      {
+        "class_index": 696,
+        "count": 5,
+        "fraction": 0.0012738853503184713
+      },
+      {
+        "class_index": 882,
+        "count": 4,
+        "fraction": 0.001019108280254777
+      },
+      {
+        "class_index": 584,
+        "count": 4,
+        "fraction": 0.001019108280254777
+      },
+      {
+        "class_index": 451,
+        "count": 4,
+        "fraction": 0.001019108280254777
+      },
+      {
+        "class_index": 67,
+        "count": 4,
+        "fraction": 0.001019108280254777
+      },
+      {
+        "class_index": 418,
+        "count": 4,
+        "fraction": 0.001019108280254777
+      },
+      {
+        "class_index": 571,
+        "count": 4,
+        "fraction": 0.001019108280254777
+      },
+      {
+        "class_index": 455,
+        "count": 4,
+        "fraction": 0.001019108280254777
+      },
+      {
+        "class_index": 556,
+        "count": 4,
+        "fraction": 0.001019108280254777
+      },
+      {
+        "class_index": 697,
+        "count": 3,
+        "fraction": 0.0007643312101910828
+      },
+      {
+        "class_index": 568,
+        "count": 3,
+        "fraction": 0.0007643312101910828
+      },
+      {
+        "class_index": 65,
+        "count": 3,
+        "fraction": 0.0007643312101910828
+      },
+      {
+        "class_index": 290,
+        "count": 3,
+        "fraction": 0.0007643312101910828
+      },
+      {
+        "class_index": 288,
+        "count": 3,
+        "fraction": 0.0007643312101910828
+      },
+      {
+        "class_index": 545,
+        "count": 3,
+        "fraction": 0.0007643312101910828
+      },
+      {
+        "class_index": 622,
+        "count": 3,
+        "fraction": 0.0007643312101910828
+      },
+      {
+        "class_index": 401,
+        "count": 3,
+        "fraction": 0.0007643312101910828
+      },
+      {
+        "class_index": 791,
+        "count": 3,
+        "fraction": 0.0007643312101910828
+      },
+      {
+        "class_index": 468,
+        "count": 3,
+        "fraction": 0.0007643312101910828
+      },
+      {
+        "class_index": 878,
+        "count": 3,
+        "fraction": 0.0007643312101910828
+      },
+      {
+        "class_index": 478,
+        "count": 3,
+        "fraction": 0.0007643312101910828
+      },
+      {
+        "class_index": 679,
+        "count": 3,
+        "fraction": 0.0007643312101910828
+      },
+      {
+        "class_index": 898,
+        "count": 3,
+        "fraction": 0.0007643312101910828
+      },
+      {
+        "class_index": 593,
+        "count": 3,
+        "fraction": 0.0007643312101910828
+      },
+      {
+        "class_index": 735,
+        "count": 2,
+        "fraction": 0.0005095541401273885
+      },
+      {
+        "class_index": 282,
+        "count": 2,
+        "fraction": 0.0005095541401273885
+      },
+      {
+        "class_index": 619,
+        "count": 2,
+        "fraction": 0.0005095541401273885
+      },
+      {
+        "class_index": 673,
+        "count": 2,
+        "fraction": 0.0005095541401273885
+      },
+      {
+        "class_index": 905,
+        "count": 2,
+        "fraction": 0.0005095541401273885
+      },
+      {
+        "class_index": 528,
+        "count": 2,
+        "fraction": 0.0005095541401273885
+      },
+      {
+        "class_index": 687,
+        "count": 2,
+        "fraction": 0.0005095541401273885
+      },
+      {
+        "class_index": 559,
+        "count": 2,
+        "fraction": 0.0005095541401273885
+      },
+      {
+        "class_index": 314,
+        "count": 2,
+        "fraction": 0.0005095541401273885
+      },
+      {
+        "class_index": 695,
+        "count": 2,
+        "fraction": 0.0005095541401273885
+      },
+      {
+        "class_index": 917,
+        "count": 2,
+        "fraction": 0.0005095541401273885
+      },
+      {
+        "class_index": 824,
+        "count": 2,
+        "fraction": 0.0005095541401273885
+      },
+      {
+        "class_index": 518,
+        "count": 2,
+        "fraction": 0.0005095541401273885
+      },
+      {
+        "class_index": 562,
+        "count": 2,
+        "fraction": 0.0005095541401273885
+      },
+      {
+        "class_index": 538,
+        "count": 2,
+        "fraction": 0.0005095541401273885
+      },
+      {
+        "class_index": 832,
+        "count": 2,
+        "fraction": 0.0005095541401273885
+      },
+      {
+        "class_index": 313,
+        "count": 2,
+        "fraction": 0.0005095541401273885
+      },
+      {
+        "class_index": 800,
+        "count": 2,
+        "fraction": 0.0005095541401273885
+      },
+      {
+        "class_index": 487,
+        "count": 2,
+        "fraction": 0.0005095541401273885
+      },
+      {
+        "class_index": 419,
+        "count": 2,
+        "fraction": 0.0005095541401273885
+      },
+      {
+        "class_index": 519,
+        "count": 2,
+        "fraction": 0.0005095541401273885
+      },
+      {
+        "class_index": 861,
+        "count": 2,
+        "fraction": 0.0005095541401273885
+      },
+      {
+        "class_index": 792,
+        "count": 2,
+        "fraction": 0.0005095541401273885
+      },
+      {
+        "class_index": 572,
+        "count": 1,
+        "fraction": 0.00025477707006369424
+      },
+      {
+        "class_index": 808,
+        "count": 1,
+        "fraction": 0.00025477707006369424
+      },
+      {
+        "class_index": 6,
+        "count": 1,
+        "fraction": 0.00025477707006369424
+      },
+      {
+        "class_index": 178,
+        "count": 1,
+        "fraction": 0.00025477707006369424
+      },
+      {
+        "class_index": 881,
+        "count": 1,
+        "fraction": 0.00025477707006369424
+      },
+      {
+        "class_index": 651,
+        "count": 1,
+        "fraction": 0.00025477707006369424
+      },
+      {
+        "class_index": 754,
+        "count": 1,
+        "fraction": 0.00025477707006369424
+      },
+      {
+        "class_index": 414,
+        "count": 1,
+        "fraction": 0.00025477707006369424
+      },
+      {
+        "class_index": 859,
+        "count": 1,
+        "fraction": 0.00025477707006369424
+      },
+      {
+        "class_index": 790,
+        "count": 1,
+        "fraction": 0.00025477707006369424
+      },
+      {
+        "class_index": 669,
+        "count": 1,
+        "fraction": 0.00025477707006369424
+      },
+      {
+        "class_index": 889,
+        "count": 1,
+        "fraction": 0.00025477707006369424
+      },
+      {
+        "class_index": 75,
+        "count": 1,
+        "fraction": 0.00025477707006369424
+      },
+      {
+        "class_index": 110,
+        "count": 1,
+        "fraction": 0.00025477707006369424
+      },
+      {
+        "class_index": 372,
+        "count": 1,
+        "fraction": 0.00025477707006369424
+      },
+      {
+        "class_index": 683,
+        "count": 1,
+        "fraction": 0.00025477707006369424
+      },
+      {
+        "class_index": 474,
+        "count": 1,
+        "fraction": 0.00025477707006369424
+      },
+      {
+        "class_index": 424,
+        "count": 1,
+        "fraction": 0.00025477707006369424
+      },
+      {
+        "class_index": 655,
+        "count": 1,
+        "fraction": 0.00025477707006369424
+      },
+      {
+        "class_index": 902,
+        "count": 1,
+        "fraction": 0.00025477707006369424
+      },
+      {
+        "class_index": 462,
+        "count": 1,
+        "fraction": 0.00025477707006369424
+      },
+      {
+        "class_index": 640,
+        "count": 1,
+        "fraction": 0.00025477707006369424
+      },
+      {
+        "class_index": 397,
+        "count": 1,
+        "fraction": 0.00025477707006369424
+      },
+      {
+        "class_index": 663,
+        "count": 1,
+        "fraction": 0.00025477707006369424
+      },
+      {
+        "class_index": 826,
+        "count": 1,
+        "fraction": 0.00025477707006369424
+      },
+      {
+        "class_index": 807,
+        "count": 1,
+        "fraction": 0.00025477707006369424
+      },
+      {
+        "class_index": 816,
+        "count": 1,
+        "fraction": 0.00025477707006369424
+      },
+      {
+        "class_index": 57,
+        "count": 1,
+        "fraction": 0.00025477707006369424
+      },
+      {
+        "class_index": 501,
+        "count": 1,
+        "fraction": 0.00025477707006369424
+      },
+      {
+        "class_index": 111,
+        "count": 1,
+        "fraction": 0.00025477707006369424
+      },
+      {
+        "class_index": 854,
+        "count": 1,
+        "fraction": 0.00025477707006369424
+      },
+      {
+        "class_index": 446,
+        "count": 1,
+        "fraction": 0.00025477707006369424
+      },
+      {
+        "class_index": 644,
+        "count": 1,
+        "fraction": 0.00025477707006369424
+      },
+      {
+        "class_index": 656,
+        "count": 1,
+        "fraction": 0.00025477707006369424
+      },
+      {
+        "class_index": 565,
+        "count": 1,
+        "fraction": 0.00025477707006369424
+      },
+      {
+        "class_index": 436,
+        "count": 1,
+        "fraction": 0.00025477707006369424
+      },
+      {
+        "class_index": 609,
+        "count": 1,
+        "fraction": 0.00025477707006369424
+      },
+      {
+        "class_index": 761,
+        "count": 1,
+        "fraction": 0.00025477707006369424
+      },
+      {
+        "class_index": 743,
+        "count": 1,
+        "fraction": 0.00025477707006369424
+      },
+      {
+        "class_index": 771,
+        "count": 1,
+        "fraction": 0.00025477707006369424
+      },
+      {
+        "class_index": 779,
+        "count": 1,
+        "fraction": 0.00025477707006369424
+      },
+      {
+        "class_index": 458,
+        "count": 1,
+        "fraction": 0.00025477707006369424
+      },
+      {
+        "class_index": 760,
+        "count": 1,
+        "fraction": 0.00025477707006369424
+      },
+      {
+        "class_index": 763,
+        "count": 1,
+        "fraction": 0.00025477707006369424
+      },
+      {
+        "class_index": 823,
+        "count": 1,
+        "fraction": 0.00025477707006369424
+      },
+      {
+        "class_index": 837,
+        "count": 1,
+        "fraction": 0.00025477707006369424
+      },
+      {
+        "class_index": 574,
+        "count": 1,
+        "fraction": 0.00025477707006369424
+      },
+      {
+        "class_index": 610,
+        "count": 1,
+        "fraction": 0.00025477707006369424
+      },
+      {
+        "class_index": 604,
+        "count": 1,
+        "fraction": 0.00025477707006369424
+      },
+      {
+        "class_index": 440,
+        "count": 1,
+        "fraction": 0.00025477707006369424
+      },
+      {
+        "class_index": 968,
+        "count": 1,
+        "fraction": 0.00025477707006369424
+      },
+      {
+        "class_index": 615,
+        "count": 1,
+        "fraction": 0.00025477707006369424
+      },
+      {
+        "class_index": 778,
+        "count": 1,
+        "fraction": 0.00025477707006369424
+      },
+      {
+        "class_index": 855,
+        "count": 1,
+        "fraction": 0.00025477707006369424
+      },
+      {
+        "class_index": 427,
+        "count": 1,
+        "fraction": 0.00025477707006369424
+      },
+      {
+        "class_index": 529,
+        "count": 1,
+        "fraction": 0.00025477707006369424
+      },
+      {
+        "class_index": 966,
+        "count": 1,
+        "fraction": 0.00025477707006369424
+      },
+      {
+        "class_index": 301,
+        "count": 1,
+        "fraction": 0.00025477707006369424
+      },
+      {
+        "class_index": 71,
+        "count": 1,
+        "fraction": 0.00025477707006369424
+      },
+      {
+        "class_index": 58,
+        "count": 1,
+        "fraction": 0.00025477707006369424
+      }
+    ]
+  },
+  "per_channel_depthwise_weight_ranges": {
+    "layers": [
+      {
+        "name": "mobilenetv2_1.00_224/block_16_depthwise_BN/FusedBatchNormV3;mobilenetv2_1.00_224/block_16_depthwise/depthwise",
+        "shape": [
+          1,
+          3,
+          3,
+          960
+        ],
+        "channels": 960,
+        "scale_min": 0.0017597954720258713,
+        "scale_max": 0.2490413933992386,
+        "scale_ratio_max_min": 141.51723729152621,
+        "channel_range_min": 0.05319769307971001,
+        "channel_range_median": 0.5501947228331119,
+        "channel_range_max": 40.09566433727741,
+        "channel_range_ratio_max_min": 753.7105843518277
+      },
+      {
+        "name": "mobilenetv2_1.00_224/block_15_depthwise_BN/FusedBatchNormV3;mobilenetv2_1.00_224/block_15_depthwise/depthwise;mobilenetv2_1.00_224/block_16_depthwise/depthwise",
+        "shape": [
+          1,
+          3,
+          3,
+          960
+        ],
+        "channels": 960,
+        "scale_min": 0.0008335151360370219,
+        "scale_max": 0.054880015552043915,
+        "scale_ratio_max_min": 65.8416544335031,
+        "channel_range_min": 0.02557244338095188,
+        "channel_range_median": 0.8118165924679488,
+        "channel_range_max": 6.573795199394226,
+        "channel_range_ratio_max_min": 257.0655881983824
+      },
+      {
+        "name": "mobilenetv2_1.00_224/block_14_depthwise_BN/FusedBatchNormV3;mobilenetv2_1.00_224/block_14_depthwise/depthwise;mobilenetv2_1.00_224/block_16_depthwise/depthwise",
+        "shape": [
+          1,
+          3,
+          3,
+          960
+        ],
+        "channels": 960,
+        "scale_min": 0.0013392968103289604,
+        "scale_max": 0.048465706408023834,
+        "scale_ratio_max_min": 36.18742763683549,
+        "channel_range_min": 0.03482171706855297,
+        "channel_range_median": 1.4171467232517898,
+        "channel_range_max": 9.014621391892433,
+        "channel_range_ratio_max_min": 258.87929001736154
+      },
+      {
+        "name": "mobilenetv2_1.00_224/block_13_depthwise_BN/FusedBatchNormV3;mobilenetv2_1.00_224/block_13_depthwise/depthwise",
+        "shape": [
+          1,
+          3,
+          3,
+          576
+        ],
+        "channels": 576,
+        "scale_min": 0.0008174526155926287,
+        "scale_max": 0.019130820408463478,
+        "scale_ratio_max_min": 23.402971675115634,
+        "channel_range_min": 0.03351555723929778,
+        "channel_range_median": 0.33046686672605574,
+        "channel_range_max": 3.7879024408757687,
+        "channel_range_ratio_max_min": 113.01922906519258
+      },
+      {
+        "name": "mobilenetv2_1.00_224/block_12_depthwise_BN/FusedBatchNormV3;mobilenetv2_1.00_224/block_12_depthwise/depthwise;mobilenetv2_1.00_224/block_13_depthwise/depthwise",
+        "shape": [
+          1,
+          3,
+          3,
+          576
+        ],
+        "channels": 576,
+        "scale_min": 0.0015132533153519034,
+        "scale_max": 0.0766424834728241,
+        "scale_ratio_max_min": 50.6474908696969,
+        "channel_range_min": 0.07934718765318394,
+        "channel_range_median": 1.291824015788734,
+        "channel_range_max": 13.64236205816269,
+        "channel_range_ratio_max_min": 171.93252163884685
+      },
+      {
+        "name": "mobilenetv2_1.00_224/block_11_depthwise_BN/FusedBatchNormV3;mobilenetv2_1.00_224/block_11_depthwise/depthwise;mobilenetv2_1.00_224/block_13_depthwise/depthwise",
+        "shape": [
+          1,
+          3,
+          3,
+          576
+        ],
+        "channels": 576,
+        "scale_min": 0.001889878185465932,
+        "scale_max": 0.10521239787340164,
+        "scale_ratio_max_min": 55.671523531270616,
+        "channel_range_min": 0.14075586572289467,
+        "channel_range_median": 1.4542376403696835,
+        "channel_range_max": 17.99132003635168,
+        "channel_range_ratio_max_min": 127.81932705931487
+      },
+      {
+        "name": "mobilenetv2_1.00_224/block_10_depthwise_BN/FusedBatchNormV3;mobilenetv2_1.00_224/block_10_depthwise/depthwise",
+        "shape": [
+          1,
+          3,
+          3,
+          384
+        ],
+        "channels": 384,
+        "scale_min": 0.0012474897084757686,
+        "scale_max": 0.034469038248062134,
+        "scale_ratio_max_min": 27.630719527279904,
+        "channel_range_min": 0.0956832931842655,
+        "channel_range_median": 1.1755621852353215,
+        "channel_range_max": 6.936171503737569,
+        "channel_range_ratio_max_min": 72.49093622206324
+      },
+      {
+        "name": "mobilenetv2_1.00_224/block_9_depthwise_BN/FusedBatchNormV3;mobilenetv2_1.00_224/block_9_depthwise/depthwise;mobilenetv2_1.00_224/block_10_depthwise/depthwise",
+        "shape": [
+          1,
+          3,
+          3,
+          384
+        ],
+        "channels": 384,
+        "scale_min": 0.0019804600160568953,
+        "scale_max": 0.04983323812484741,
+        "scale_ratio_max_min": 25.16245605607611,
+        "channel_range_min": 0.15843680128455162,
+        "channel_range_median": 1.7059398260898888,
+        "channel_range_max": 7.311376333236694,
+        "channel_range_ratio_max_min": 46.1469574868878
+      },
+      {
+        "name": "mobilenetv2_1.00_224/block_8_depthwise_BN/FusedBatchNormV3;mobilenetv2_1.00_224/block_8_depthwise/depthwise;mobilenetv2_1.00_224/block_10_depthwise/depthwise",
+        "shape": [
+          1,
+          3,
+          3,
+          384
+        ],
+        "channels": 384,
+        "scale_min": 0.0012500191805884242,
+        "scale_max": 0.054332852363586426,
+        "scale_ratio_max_min": 43.46561493401262,
+        "channel_range_min": 0.24155393335968256,
+        "channel_range_median": 1.775770764797926,
+        "channel_range_max": 13.257215976715088,
+        "channel_range_ratio_max_min": 54.8830474102635
+      },
+      {
+        "name": "mobilenetv2_1.00_224/block_7_depthwise_BN/FusedBatchNormV3;mobilenetv2_1.00_224/block_7_depthwise/depthwise;mobilenetv2_1.00_224/block_10_depthwise/depthwise",
+        "shape": [
+          1,
+          3,
+          3,
+          384
+        ],
+        "channels": 384,
+        "scale_min": 0.0020231292583048344,
+        "scale_max": 0.06464076787233353,
+        "scale_ratio_max_min": 31.95088381376856,
+        "channel_range_min": 0.12745714327320457,
+        "channel_range_median": 1.919226534664631,
+        "channel_range_max": 8.525712631642818,
+        "channel_range_ratio_max_min": 66.89081845627076
+      },
+      {
+        "name": "mobilenetv2_1.00_224/block_6_depthwise_BN/FusedBatchNormV3;mobilenetv2_1.00_224/block_6_depthwise/depthwise",
+        "shape": [
+          1,
+          3,
+          3,
+          192
+        ],
+        "channels": 192,
+        "scale_min": 0.0013605360873043537,
+        "scale_max": 0.010126321576535702,
+        "scale_ratio_max_min": 7.4428908362137625,
+        "channel_range_min": 0.10594249260611832,
+        "channel_range_median": 0.34613551141228527,
+        "channel_range_max": 2.4606961430981755,
+        "channel_range_ratio_max_min": 23.2267155752768
+      },
+      {
+        "name": "mobilenetv2_1.00_224/block_5_depthwise_BN/FusedBatchNormV3;mobilenetv2_1.00_224/block_5_depthwise/depthwise;mobilenetv2_1.00_224/block_6_depthwise/depthwise",
+        "shape": [
+          1,
+          3,
+          3,
+          192
+        ],
+        "channels": 192,
+        "scale_min": 0.002133099129423499,
+        "scale_max": 0.10850341618061066,
+        "scale_ratio_max_min": 50.8665606224945,
+        "channel_range_min": 0.2164866931270808,
+        "channel_range_median": 2.246893552131951,
+        "channel_range_max": 14.647961184382439,
+        "channel_range_ratio_max_min": 67.66217808955064
+      },
+      {
+        "name": "mobilenetv2_1.00_224/block_4_depthwise_BN/FusedBatchNormV3;mobilenetv2_1.00_224/block_4_depthwise/depthwise;mobilenetv2_1.00_224/block_6_depthwise/depthwise",
+        "shape": [
+          1,
+          3,
+          3,
+          192
+        ],
+        "channels": 192,
+        "scale_min": 0.001932684681378305,
+        "scale_max": 0.08168606460094452,
+        "scale_ratio_max_min": 42.26559323825635,
+        "channel_range_min": 0.23917929804883897,
+        "channel_range_median": 1.909958423115313,
+        "channel_range_max": 10.945932656526566,
+        "channel_range_ratio_max_min": 45.764548795905704
+      },
+      {
+        "name": "mobilenetv2_1.00_224/block_3_depthwise_BN/FusedBatchNormV3;mobilenetv2_1.00_224/block_3_depthwise/depthwise",
+        "shape": [
+          1,
+          3,
+          3,
+          144
+        ],
+        "channels": 144,
+        "scale_min": 0.0014470488531515002,
+        "scale_max": 0.019739432260394096,
+        "scale_ratio_max_min": 13.641165063227797,
+        "channel_range_min": 0.1297096610069275,
+        "channel_range_median": 0.3818053149152547,
+        "channel_range_max": 3.950169213116169,
+        "channel_range_ratio_max_min": 30.453932131587326
+      },
+      {
+        "name": "mobilenetv2_1.00_224/block_2_depthwise_BN/FusedBatchNormV3;mobilenetv2_1.00_224/block_2_depthwise/depthwise;mobilenetv2_1.00_224/block_3_depthwise/depthwise",
+        "shape": [
+          1,
+          3,
+          3,
+          144
+        ],
+        "channels": 144,
+        "scale_min": 0.0021015082020312548,
+        "scale_max": 0.2715984880924225,
+        "scale_ratio_max_min": 129.23979446280703,
+        "channel_range_min": 0.3074515510816127,
+        "channel_range_median": 1.6823194338940084,
+        "channel_range_max": 43.184159606695175,
+        "channel_range_ratio_max_min": 140.45842167578456
+      },
+      {
+        "name": "mobilenetv2_1.00_224/block_1_depthwise_BN/FusedBatchNormV3;mobilenetv2_1.00_224/block_1_depthwise/depthwise;mobilenetv2_1.00_224/block_12_project/Conv2D",
+        "shape": [
+          1,
+          3,
+          3,
+          96
+        ],
+        "channels": 96,
+        "scale_min": 0.0006364004220813513,
+        "scale_max": 0.024873968213796616,
+        "scale_ratio_max_min": 39.0854049600504,
+        "channel_range_min": 0.0509120337665081,
+        "channel_range_median": 0.5229065136518329,
+        "channel_range_max": 5.497146975249052,
+        "channel_range_ratio_max_min": 107.97343120213922
+      },
+      {
+        "name": "mobilenetv2_1.00_224/expanded_conv_depthwise_BN/FusedBatchNormV3;mobilenetv2_1.00_224/expanded_conv_depthwise/depthwise;mobilenetv2_1.00_224/block_5_project/Conv2D",
+        "shape": [
+          1,
+          3,
+          3,
+          32
+        ],
+        "channels": 32,
+        "scale_min": 0.0005993210943415761,
+        "scale_max": 0.4444526433944702,
+        "scale_ratio_max_min": 741.5935257255597,
+        "channel_range_min": 0.07283186540007591,
+        "channel_range_median": 2.4754869868047535,
+        "channel_range_max": 51.26034811139107,
+        "channel_range_ratio_max_min": 703.8175917891242
+      }
+    ],
+    "layer_count": 17,
+    "maximum_scale_ratio": 741.5935257255597,
+    "maximum_channel_range_ratio": 753.7105843518277
+  }
+}

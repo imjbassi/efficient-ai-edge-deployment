@@ -1,4 +1,5 @@
-FROM python:3.10-slim-bookworm
+ARG BASE_IMAGE=python:3.10-slim-bookworm@sha256:68d914ec641a0b69267ce65184d000a2bc3a9ee2590ab702b82250ab2385735a
+FROM ${BASE_IMAGE}
 
 # Set system environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \

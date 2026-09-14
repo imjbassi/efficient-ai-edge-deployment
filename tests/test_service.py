@@ -1,10 +1,11 @@
 import asyncio
 import io
+import json
 import unittest
 from unittest.mock import patch
 
 import numpy as np
-from fastapi import HTTPException, UploadFile
+from fastapi import HTTPException, Request, UploadFile
 from PIL import Image
 
 from src import deploy
@@ -60,9 +61,15 @@ class ServiceTests(unittest.TestCase):
             patch.object(deploy.runtime, "input_detail", input_detail),
             patch.object(deploy.runtime, "output_detail", output_detail),
         ):
-            result = asyncio.run(deploy.predict(UploadFile(file=io.BytesIO(png(128)))))
+            scope = {"type": "http", "method": "POST", "path": "/predict", "headers": []}
+            request = Request(scope)
+            result = asyncio.run(
+                deploy.predict(request, UploadFile(file=io.BytesIO(png(128))))
+            )
+            result = json.loads(result.body)
         self.assertEqual(result["predictions"][0]["class_index"], 3)
         self.assertAlmostEqual(result["predictions"][0]["score"], 228 / 256, places=5)
+        self.assertIn("invoke", result["timing_ms"])
 
 
 if __name__ == "__main__":

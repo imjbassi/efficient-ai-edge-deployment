@@ -13,7 +13,7 @@
 \newcommand{\orcidicon}{\href{https://orcid.org/0009-0006-3633-3220}{\textcolor{orcidgreen}{\raisebox{0.15ex}{\scriptsize\textsf{\bfseries iD}}}}}
 
 \begin{document}
-\title{\bfseries When Does INT8 Actually Accelerate Edge Inference?\\[0.45em]
+\title{\bfseries When Does INT8 Actually Accelerate Host-CPU Inference?\\[0.45em]
 \large A Reproducible Audit of MobileNetV2 Conversion and Packaging}
 \author{\IEEEauthorblockN{Jaiveer Bassi\,\orcidicon}
 \IEEEauthorblockA{Independent Researcher, USA\\
@@ -22,7 +22,7 @@
 \maketitle
 
 \begin{abstract}
-Eight-bit quantization is often presented as a direct route to smaller and faster edge models, but bit width alone does not determine realized latency. We audit a reproducible MobileNetV2 TensorFlow Lite pipeline across quantization granularity, CPU delegate, thread count, batch size, process restarts, and container serving. On the complete 3,925-image Imagenette validation split, per-channel INT8 reduced storage by 71.5\% and changed top-1 accuracy by $-0.92$ percentage points (paired bootstrap 95\% CI $[-1.66,-0.18]$; exact McNemar $p=.0165$). Across five fresh processes on an AMD Ryzen 5 7600, one-thread XNNPACK produced a 1.43$\times$ paired geometric-mean speedup (95\% CI $[1.18,1.73]$), whereas built-in kernels made INT8 2.22$\times$ slower (FP32/INT8 speedup 0.45$\times$, 95\% CI $[0.40,0.51]$). Per-tensor INT8 had similar latency to per-channel INT8 but collapsed to 1.04\% top-1 accuracy. The packaged service occupied 339.58 MiB uncompressed, reached health in a median 1.69 s, used 77.36 MiB resident memory after load, and delivered localhost HTTP p50/p99 latency of 46.34/71.85 ms. The central finding is that backend choice and quantization granularity govern whether INT8 is both accurate and fast.
+Eight-bit quantization is often presented as a direct route to smaller and faster edge models, but bit width alone does not determine realized latency. We audit a reproducible MobileNetV2 TensorFlow Lite host-CPU pipeline across quantization granularity, CPU backend, thread count, batch size, process restarts, and container serving. On the complete 3,925-image Imagenette validation split, per-channel INT8 reduced storage by 71.5\% and changed top-1 accuracy by $-0.92$ percentage points (paired bootstrap 95\% CI $[-1.66,-0.18]$; exact McNemar $p=.0165$). Across 20 fresh processes on an AMD Ryzen 5 7600, one-thread XNNPACK produced a 1.27$\times$ paired geometric-mean speedup (95\% CI $[1.20,1.35]$), whereas TensorFlow Lite's built-in-without-default-delegates path made INT8 2.24$\times$ slower (speedup 0.45$\times$, $[0.42,0.47]$). Per-tensor INT8 had similar latency but collapsed to 1.04\% top-1 accuracy and concentrated 19.6\% of predictions in one class. The central finding is that backend choice and quantization granularity govern whether INT8 is both accurate and fast; this host-side audit does not claim ARM-device performance.
 \end{abstract}
 
 \begin{IEEEkeywords}

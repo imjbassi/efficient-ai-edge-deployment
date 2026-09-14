@@ -4,15 +4,15 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![ORCID](https://img.shields.io/badge/ORCID-0009--0006--3633--3220-A6CE39.svg)](https://orcid.org/0009-0006-3633-3220)
 
-Reproducible code and evidence for *When Does INT8 Actually Accelerate Edge Inference?* The project audits MobileNetV2 TensorFlow Lite conversion across quantization granularity, CPU delegates, thread counts, batch size, independent process restarts, and container serving.
+Reproducible code and evidence for *When Does INT8 Actually Accelerate Host-CPU Inference?* The project audits MobileNetV2 TensorFlow Lite conversion across quantization granularity, CPU backends, thread counts, batch size, independent process restarts, and container serving.
 
 ## Main finding
 
 INT8 was always smaller, but it was not intrinsically faster or accurate. On the complete 3,925-image Imagenette validation split, per-channel INT8 reduced model storage by 71.5% and changed top-1 accuracy by -0.92 percentage points (paired bootstrap 95% CI [-1.66, -0.18], exact McNemar p=.0165). On an AMD Ryzen 5 7600:
 
-- One-thread XNNPACK produced a 1.43x paired geometric-mean speedup (95% CI [1.18, 1.73]) across five fresh processes.
-- Built-in kernels made INT8 2.22x slower: FP32/INT8 speedup was 0.45x (95% CI [0.40, 0.51]).
-- Per-tensor INT8 had similar latency to per-channel INT8 but collapsed to 1.04% top-1 accuracy.
+- One-thread XNNPACK produced a 1.27x paired geometric-mean speedup (95% CI [1.20, 1.35]) across 20 fresh processes.
+- TensorFlow Lite 2.15.1's `BUILTIN_WITHOUT_DEFAULT_DELEGATES` counterfactual made INT8 2.24x slower: FP32/INT8 speedup was 0.45x (95% CI [0.42, 0.47]). XNNPACK is the default CPU delegate.
+- Per-tensor INT8 had similar latency to per-channel INT8 but collapsed to 1.04% top-1 accuracy. It used only 187 output classes, concentrated 19.6% of predictions in one class, and removed channel-specific scales from depthwise tensors whose per-channel range ratios reach 754x.
 - The production container was 339.58 MiB uncompressed, reached health in a median 1.69 s, used 77.36 MiB RSS after load, and delivered localhost HTTP p50/p99 latency of 46.34/71.85 ms.
 
 These are measurements on the named Windows/x86 and Docker Desktop environment, not claims about ARM boards, accelerators, energy, or all neural networks.
@@ -21,47 +21,31 @@ These are measurements on the named Windows/x86 and Docker Desktop environment, 
 - [Repeated-process latency results](results/repeated_latency.json)
 - [Paired accuracy results](results/paired_accuracy.json)
 - [Container benchmark results](results/container_benchmark.json)
+- [Quantization diagnostics](results/quantization_diagnostics.json)
 - [Publication status](PUBLICATION_STATUS.md)
 - [Citation metadata](CITATION.cff)
 
-## Reproduce the experiments
+## Reproduce the paper
 
-Python 3.10 is required. The dataset downloader verifies the full Imagenette archive SHA-256 before extraction.
+Python 3.10 is required. The dataset downloader verifies the full Imagenette archive SHA-256 before extraction. After environment setup, one entry point validates the checked-in evidence, regenerates the figure, and compiles the manuscript:
 
 ```powershell
 python -m venv .venv
 .venv\Scripts\python -m pip install -r requirements-experiment.txt
 .venv\Scripts\python scripts\download_imagenette.py --destination data
-$env:TF_ENABLE_ONEDNN_OPTS = "0"
-.venv\Scripts\python src\experiment.py `
-  --data-dir data\imagenette2-160 `
-  --archive data\imagenette2-160.tgz `
-  --output results\local_experiment.json `
-  --calibration-samples 200 `
-  --latency-samples 500 `
-  --warmup 50 `
-  --threads 1
+.venv\Scripts\python scripts\reproduce_paper.py --tectonic path\to\tectonic.exe
 ```
 
-Generate the per-tensor control, evaluate it, run the paired analysis, and execute the repeated-process matrix:
+Rerun every native measurement (an overnight-scale job) with:
 
 ```powershell
-.venv\Scripts\python scripts\create_per_tensor_model.py `
-  --data-dir data\imagenette2-160
-.venv\Scripts\python src\evaluate_model.py `
-  --model models\mobilenet_v2_int8_per_tensor.tflite `
+.venv\Scripts\python scripts\reproduce_paper.py `
+  --measure `
   --data-dir data\imagenette2-160 `
-  --output results\per_tensor_accuracy.json
-.venv\Scripts\python src\paired_accuracy.py `
-  --data-dir data\imagenette2-160 `
-  --output results\paired_accuracy.json
-.venv\Scripts\python src\repeated_latency.py `
-  --data-dir data\imagenette2-160 `
-  --output results\repeated_latency.json
-.venv\Scripts\python scripts\plot_latency_audit.py
+  --tectonic path\to\tectonic.exe
 ```
 
-The latency matrix is intentionally substantial. It starts a fresh process for every replicate and retains raw observations, initialization time, affinity, and sampled host load.
+The latency matrix starts a fresh process for each of 20 replicates per condition and retains raw observations, initialization time, affinity, and sampled host load. A resumable checkpoint is updated after every process and removed only after successful completion.
 
 ## Run and benchmark the service
 
@@ -77,6 +61,16 @@ Run the packaging benchmark from a separate terminal after Docker Desktop is rea
 .venv\Scripts\python scripts\benchmark_container.py `
   --image data\imagenette2-160\val\n01440764\ILSVRC2012_val_00009111.JPEG `
   --output results\container_benchmark.json
+.venv\Scripts\python scripts\benchmark_image_size.py
+```
+
+Equivalently, run both packaging measurements and rebuild the PDF through the single entry point:
+
+```powershell
+.venv\Scripts\python scripts\reproduce_paper.py `
+  --container `
+  --image data\imagenette2-160\val\n01440764\ILSVRC2012_val_00009111.JPEG `
+  --tectonic path\to\tectonic.exe
 ```
 
 The image contains only the serving dependencies and per-channel INT8 model. It runs as a non-root user with a read-only filesystem and explicit CPU, memory, and upload-size limits.
@@ -91,7 +85,7 @@ python scripts\verify_artifacts.py
 tectonic paper/main.tex --outdir output/pdf
 ```
 
-The experiment environment installs full TensorFlow and is separate from the smaller Linux serving environment. The MIT license applies to repository code and documentation; pretrained weights and Imagenette remain subject to their upstream terms.
+The experiment environment installs full TensorFlow and is separate from the smaller Linux serving environment. The MIT license applies to repository code and documentation; pretrained weights and Imagenette remain subject to their upstream terms. See [third-party notices](THIRD_PARTY_LICENSES.md) for the model and dataset provenance boundary.
 
 ## Repository layout
 

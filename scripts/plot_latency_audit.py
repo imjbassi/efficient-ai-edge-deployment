@@ -26,6 +26,7 @@ def pooled(result: dict, name: str) -> np.ndarray:
 
 def main() -> None:
     result = json.loads(RESULT.read_text(encoding="utf-8"))
+    replicates = result["configurations"]["fp32_xnnpack_t1_b1"]["summary"]["replicates"]
     plt.rcParams.update({
         "font.family": "serif",
         "font.size": 8,
@@ -47,7 +48,7 @@ def main() -> None:
     axes[0].set_ylim(0, 1.01)
     axes[0].grid(alpha=0.25, linewidth=0.5)
     axes[0].legend(loc="lower right", frameon=False)
-    axes[0].set_title("(a) One-thread XNNPACK, 5 × 500 calls")
+    axes[0].set_title(f"(a) One-thread XNNPACK, {replicates} × 500 calls")
 
     names = ["xnnpack_t1_b1", "xnnpack_t2_b1", "xnnpack_t4_b1", "xnnpack_t6_b1", "builtin_t1_b1"]
     labels = ["XNN\n1 th.", "XNN\n2 th.", "XNN\n4 th.", "XNN\n6 th.", "Built-in\n1 th."]

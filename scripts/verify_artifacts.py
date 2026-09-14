@@ -71,11 +71,23 @@ def main() -> None:
     repeated = load_json(ROOT / "results" / "repeated_latency.json")
     require(len(repeated["configurations"]) == 13, "Unexpected latency configuration count")
     for name, config in repeated["configurations"].items():
-        require(config["summary"]["replicates"] == 5, f"Unexpected replicate count for {name}")
+        require(config["summary"]["replicates"] == 20, f"Unexpected replicate count for {name}")
     primary = repeated["matched_speedups"]["xnnpack_t1_b1"]
     builtin = repeated["matched_speedups"]["builtin_t1_b1"]
     require(primary["paired_log_t_95"][0] > 1, "Primary speedup CI no longer exceeds one")
     require(builtin["paired_log_t_95"][1] < 1, "Built-in-kernel speedup CI no longer falls below one")
+    require(
+        repeated["matched_speedups"]["xnnpack_t4_b1"]["paired_log_t_95"][0] > 1,
+        "Four-thread speedup CI no longer exceeds one",
+    )
+
+    diagnostics = load_json(ROOT / "results" / "quantization_diagnostics.json")
+    prediction = diagnostics["per_tensor_prediction_distribution"]
+    depthwise = diagnostics["per_channel_depthwise_weight_ranges"]
+    require(prediction["samples"] == 3925, "Unexpected diagnostics sample count")
+    require(prediction["dominant_class_fraction"] > 0.19, "Per-tensor collapse signal changed")
+    require(depthwise["layer_count"] == 17, "Unexpected depthwise-layer count")
+    require(depthwise["maximum_channel_range_ratio"] > 700, "Depthwise range evidence changed")
 
     container = load_json(ROOT / "results" / "container_benchmark.json")
     require(container["cold_start"]["samples"] == 5, "Unexpected cold-start count")

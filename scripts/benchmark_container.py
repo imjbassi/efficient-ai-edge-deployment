@@ -6,6 +6,7 @@ import argparse
 import json
 import os
 import platform
+import shutil
 import statistics
 import subprocess
 import time
@@ -21,9 +22,21 @@ SERVICE_URL = "http://127.0.0.1:8000"
 IMAGE_NAME = "efficient-ai-edge-deployment-edge-inference-service:latest"
 
 
+def docker_executable() -> str:
+    discovered = shutil.which("docker")
+    if discovered:
+        return discovered
+    local_app_data = os.environ.get("LOCALAPPDATA")
+    if local_app_data:
+        bundled = Path(local_app_data) / "Programs" / "DockerDesktop" / "resources" / "bin" / "docker.exe"
+        if bundled.is_file():
+            return str(bundled)
+    raise FileNotFoundError("Docker CLI was not found on PATH or in Docker Desktop's default location")
+
+
 def docker(*arguments: str, capture: bool = False) -> str:
     result = subprocess.run(
-        ["docker", *arguments],
+        [docker_executable(), *arguments],
         check=True,
         text=True,
         capture_output=capture,
@@ -62,12 +75,29 @@ def multipart_request(image: bytes) -> urllib.request.Request:
     )
 
 
-def timed_request(image: bytes) -> tuple[float, dict]:
+def timed_request(image: bytes) -> tuple[float, dict, dict[str, float]]:
     request = multipart_request(image)
     started = time.perf_counter_ns()
     with urllib.request.urlopen(request, timeout=10) as response:
         payload = json.loads(response.read())
-    return (time.perf_counter_ns() - started) / 1_000_000, payload
+        headers = {
+            "server_total": float(response.headers["x-edge-server-total-ms"]),
+            "serialize": float(response.headers["x-edge-serialize-ms"]),
+            "endpoint_pre_serialize": float(
+                response.headers["x-edge-endpoint-pre-serialize-ms"]
+            ),
+        }
+    return (time.perf_counter_ns() - started) / 1_000_000, payload, headers
+
+
+def summarize(values: list[float]) -> dict:
+    return {
+        "mean_ms": statistics.fmean(values),
+        "median_ms": statistics.median(values),
+        "p90_ms": float(np.percentile(values, 90)),
+        "p99_ms": float(np.percentile(values, 99)),
+        "raw_ms": values,
+    }
 
 
 def main() -> None:
@@ -100,11 +130,36 @@ def main() -> None:
             timed_request(image)
         latencies = []
         service_inference = []
+        server_stages: dict[str, list[float]] = {}
         prediction = None
         for index in range(args.requests):
-            latency, prediction = timed_request(image)
+            latency, prediction, timing_headers = timed_request(image)
             latencies.append(latency)
             service_inference.append(prediction["inference_ms"])
+            request_stages = dict(prediction["timing_ms"])
+            request_stages.update(timing_headers)
+            accounted = sum(
+                request_stages[name]
+                for name in (
+                    "framework_parse",
+                    "upload_read",
+                    "decode",
+                    "resize_crop",
+                    "normalize_quantize",
+                    "queue_wait",
+                    "invoke",
+                    "postprocess",
+                    "serialize",
+                )
+            )
+            request_stages["server_unattributed"] = max(
+                0.0, request_stages["server_total"] - accounted
+            )
+            request_stages["client_transport"] = max(
+                0.0, latency - request_stages["server_total"]
+            )
+            for name, value in request_stages.items():
+                server_stages.setdefault(name, []).append(value)
             if (index + 1) % 50 == 0:
                 print(f"HTTP request {index + 1}/{args.requests}")
         final_health = get_json("/health")
@@ -146,6 +201,15 @@ def main() -> None:
                 "raw_ms": latencies,
                 "service_reported_inference_ms": service_inference,
                 "last_prediction": prediction,
+            },
+            "server_breakdown": {
+                "definition": (
+                    "server-side stages are instrumented with perf_counter_ns; "
+                    "client_transport is client wall time minus server_total"
+                ),
+                "stages": {
+                    name: summarize(values) for name, values in server_stages.items()
+                },
             },
             "runtime": {
                 "rss_mib_after_requests": final_health["rss_mib"],

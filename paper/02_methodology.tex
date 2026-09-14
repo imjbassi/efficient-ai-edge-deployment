@@ -7,7 +7,7 @@ The source model is MobileNetV2 with ImageNet weights and a $224\times224\times3
 \begin{equation}
 q=\operatorname{clip}(\operatorname{round}(x/S)+Z,q_{\min},q_{\max}).
 \end{equation}
-All three outputs are retained with SHA-256 hashes. Tensor metadata verify that the control has at most one scale per tensor, while the primary model contains 104 tensors with multiple scales.
+All three outputs are retained with SHA-256 hashes. Tensor metadata verify that the control has at most one scale per tensor, while the primary model contains 104 tensors with multiple scales. Because per-channel scales are particularly important for depthwise MobileNet layers \cite{krishnamoorthi2018}, diagnostics also retain the per-tensor model's prediction histogram and channel-range statistics for every depthwise weight tensor.
 
 \subsection{Dataset and paired accuracy protocol}
 
@@ -17,9 +17,9 @@ Each image is converted to RGB, resized so its shortest side is 256 pixels, cent
 
 \subsection{Repeated-process latency protocol}
 
-Latency is measured on an AMD Ryzen 5 7600 (6 physical/12 logical cores) running Microsoft Windows 24H2, build 26100.9278, and TensorFlow 2.15.1 with oneDNN disabled. Every replicate starts a fresh process and interpreter, uses 50 untimed warm-ups, then times 500 deterministically shuffled images with a monotonic nanosecond clock; the slower built-in-kernel condition uses 100 images. Preprocessing is excluded. Five matched replicates alternate FP32/INT8 order within deterministically shuffled configuration blocks. Benchmark processes use above-normal priority and physical-core-spaced affinity. Docker Desktop is stopped, the Windows Balanced power plan is active, and interactive applications remain open. Pre-interpreter host CPU load is retained for each run.
+Latency is measured on an AMD Ryzen 5 7600 (6 physical/12 logical cores) running Microsoft Windows 24H2, build 26100.9278, and TensorFlow Lite 2.15.1 with oneDNN disabled. XNNPACK is the Python interpreter's default CPU delegate. The non-delegate condition selects TensorFlow Lite 2.15.1's \texttt{BUILTIN\_WITHOUT\_DEFAULT\_DELEGATES} resolver; it is a counterfactual kernel path, not a recommended deployment configuration. Every replicate starts a fresh process and interpreter, uses 50 untimed warm-ups, then times 500 deterministically shuffled images with a monotonic nanosecond clock; the slower counterfactual uses 100 images. Preprocessing is excluded. Twenty matched replicates alternate FP32/INT8 order within deterministically shuffled configuration blocks. Benchmark processes use above-normal priority and physical-core-spaced affinity. Docker Desktop is stopped and the Windows Balanced power plan is active. Interactive applications deliberately remain open to represent a developer-workstation deployment host rather than an idle laboratory machine; pre-interpreter host CPU load is retained for every run.
 
-The controls cross XNNPACK thread counts $\{1,2,4,6\}$, XNNPACK versus built-in kernels at one thread, and batch one versus batch four. A per-tensor INT8 latency control is also run. For each model we report the mean of five process means with a two-sided Student-$t$ 95\% interval. For matched FP32/INT8 pairs we report the geometric mean of replicate speedup ratios and a $t$ interval in log space.
+The controls cross XNNPACK thread counts $\{1,2,4,6\}$, XNNPACK versus the built-in counterfactual at one thread, and batch one versus batch four. A per-tensor INT8 latency control is also run. For each model we report the mean of 20 process means with a two-sided Student-$t$ 95\% interval. For matched FP32/INT8 pairs we report the geometric mean of replicate speedup ratios and a $t$ interval in log space (19 degrees of freedom).
 
 \subsection{Serving and packaging protocol}
 

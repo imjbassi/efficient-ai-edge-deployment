@@ -15,6 +15,13 @@ from pathlib import Path
 
 import numpy as np
 import psutil
+from scipy.stats import t as student_t
+
+
+def t_critical_95(sample_count: int) -> float:
+    if sample_count < 2:
+        return 0.0
+    return float(student_t.ppf(0.975, df=sample_count - 1))
 
 
 def summarize(runs: list[dict]) -> dict:
@@ -22,7 +29,8 @@ def summarize(runs: list[dict]) -> dict:
     mean = statistics.fmean(means)
     if len(means) > 1:
         standard_error = statistics.stdev(means) / len(means) ** 0.5
-        ci = [mean - 2.7764451051977987 * standard_error, mean + 2.7764451051977987 * standard_error]
+        half_width = t_critical_95(len(means)) * standard_error
+        ci = [mean - half_width, mean + half_width]
     else:
         ci = [mean, mean]
     pooled = [value for run in runs for value in run["raw_ms_per_image"]]
@@ -47,7 +55,7 @@ def compare(fp32_runs: list[dict], int8_runs: list[dict]) -> dict:
     ]
     center = statistics.fmean(log_ratios)
     standard_error = statistics.stdev(log_ratios) / len(log_ratios) ** 0.5
-    half_width = 2.7764451051977987 * standard_error
+    half_width = t_critical_95(len(log_ratios)) * standard_error
     return {
         "definition": "FP32 run mean divided by matched INT8 run mean; values above one favor INT8",
         "replicate_speedups": [math.exp(value) for value in log_ratios],
@@ -60,7 +68,13 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--data-dir", type=Path, required=True)
     parser.add_argument("--output", type=Path, default=Path("results/repeated_latency.json"))
-    parser.add_argument("--replicates", type=int, default=5)
+    parser.add_argument("--replicates", type=int, default=20)
+    parser.add_argument(
+        "--checkpoint",
+        type=Path,
+        default=Path("results/repeated_latency.tmp"),
+        help="Resumable checkpoint updated after every fresh-process run",
+    )
     parser.add_argument("--host-note", default="")
     args = parser.parse_args()
 
@@ -90,6 +104,13 @@ def main() -> None:
     physical_cpu_ids = list(range(0, logical_cpus, stride))[:physical_count]
     worker = Path(__file__).with_name("latency_worker.py")
     all_runs = {config["name"]: [] for config in configurations}
+    if args.checkpoint.is_file():
+        checkpoint = json.loads(args.checkpoint.read_text(encoding="utf-8"))
+        if checkpoint.get("replicates") != args.replicates:
+            parser.error("Checkpoint replicate count does not match --replicates")
+        for name in all_runs:
+            all_runs[name] = checkpoint.get("runs", {}).get(name, [])
+        print(f"Resuming from {args.checkpoint}", flush=True)
     with tempfile.TemporaryDirectory(prefix="edge-latency-") as directory:
         temporary = Path(directory)
         paired_names = [
@@ -110,6 +131,8 @@ def main() -> None:
                 execution_names.extend(pair if (replicate + pair_index) % 2 == 0 else pair[::-1])
             execution_names.extend(standalone_names)
             for name in execution_names:
+                if len(all_runs[name]) > replicate:
+                    continue
                 config = config_by_name[name]
                 output = temporary / f"{config['name']}-{replicate}.json"
                 command = [
@@ -132,6 +155,11 @@ def main() -> None:
                 print(f"Replicate {replicate + 1}/{args.replicates}: {config['name']}", flush=True)
                 subprocess.run(command, check=True, env=environment)
                 all_runs[config["name"]].append(json.loads(output.read_text(encoding="utf-8")))
+                args.checkpoint.parent.mkdir(parents=True, exist_ok=True)
+                args.checkpoint.write_text(
+                    json.dumps({"replicates": args.replicates, "runs": all_runs}, indent=2),
+                    encoding="utf-8",
+                )
 
     summaries = {
         name: {"summary": summarize(runs), "runs": runs} for name, runs in all_runs.items()
@@ -151,7 +179,10 @@ def main() -> None:
             "order": "deterministically shuffled matched blocks; FP32/INT8 order alternates within blocks",
             "preprocessing_timed": False,
             "warmup_invocations_per_run": 50,
-            "confidence_interval": "two-sided 95% Student t interval across run means (df=4)",
+            "confidence_interval": (
+                "two-sided 95% Student t interval across run means "
+                f"(df={args.replicates - 1})"
+            ),
             "host_note": args.host_note,
             "logical_cpus": logical_cpus,
             "physical_cpu_ids_used": physical_cpu_ids,
@@ -167,6 +198,7 @@ def main() -> None:
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, indent=2), encoding="utf-8")
+    args.checkpoint.unlink(missing_ok=True)
     print(json.dumps({name: value["summary"] for name, value in result["configurations"].items()}, indent=2))
     print(f"Wrote {args.output}")
 

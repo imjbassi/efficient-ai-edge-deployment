@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import io
+import json
 import logging
 import os
 import threading
@@ -14,7 +15,7 @@ from typing import Any
 
 import numpy as np
 import psutil
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, HTTPException, Request, Response, UploadFile
 from PIL import Image, UnidentifiedImageError
 
 try:
@@ -82,6 +83,16 @@ app = FastAPI(
 )
 
 
+@app.middleware("http")
+async def add_server_timing(request: Request, call_next):
+    request.state.arrival_ns = time.perf_counter_ns()
+    response = await call_next(request)
+    response.headers["x-edge-server-total-ms"] = (
+        f"{(time.perf_counter_ns() - request.state.arrival_ns) / 1_000_000:.6f}"
+    )
+    return response
+
+
 def _quantize(array: np.ndarray, detail: dict) -> np.ndarray:
     dtype = detail["dtype"]
     if dtype not in (np.int8, np.uint8):
@@ -94,11 +105,20 @@ def _quantize(array: np.ndarray, detail: dict) -> np.ndarray:
 
 
 def preprocess_image(content: bytes, detail: dict) -> np.ndarray:
+    array, _ = preprocess_image_profiled(content, detail)
+    return array
+
+
+def preprocess_image_profiled(content: bytes, detail: dict) -> tuple[np.ndarray, dict[str, float]]:
+    decode_started = time.perf_counter_ns()
     try:
         with Image.open(io.BytesIO(content)) as source:
             if source.width * source.height > MAX_IMAGE_PIXELS:
                 raise HTTPException(status_code=413, detail="Image dimensions exceed configured limit")
             image = source.convert("RGB")
+            image.load()
+            decode_ms = (time.perf_counter_ns() - decode_started) / 1_000_000
+            resize_started = time.perf_counter_ns()
             height, width = (int(detail["shape"][1]), int(detail["shape"][2]))
             resize_short_side = round(max(height, width) * 256 / 224)
             scale = resize_short_side / min(image.size)
@@ -110,12 +130,20 @@ def preprocess_image(content: bytes, detail: dict) -> np.ndarray:
             top = (image.height - height) // 2
             image = image.crop((left, top, left + width, top + height))
             array = np.asarray(image, dtype=np.float32)
+            resize_crop_ms = (time.perf_counter_ns() - resize_started) / 1_000_000
     except HTTPException:
         raise
     except (UnidentifiedImageError, OSError) as exc:
         raise HTTPException(status_code=400, detail="Invalid image") from exc
+    normalize_started = time.perf_counter_ns()
     normalized = (array / 127.5) - 1.0
-    return _quantize(np.expand_dims(normalized, 0), detail)
+    quantized = _quantize(np.expand_dims(normalized, 0), detail)
+    normalize_quantize_ms = (time.perf_counter_ns() - normalize_started) / 1_000_000
+    return quantized, {
+        "decode": decode_ms,
+        "resize_crop": resize_crop_ms,
+        "normalize_quantize": normalize_quantize_ms,
+    }
 
 
 def _require_model() -> None:
@@ -161,28 +189,52 @@ def metadata() -> dict:
 
 
 @app.post("/predict")
-async def predict(file: UploadFile = File(...)) -> dict:
+async def predict(request: Request, file: UploadFile = File(...)) -> Response:
     _require_model()
+    endpoint_started = time.perf_counter_ns()
+    framework_parse_ms = (
+        (endpoint_started - request.state.arrival_ns) / 1_000_000
+        if hasattr(request.state, "arrival_ns")
+        else 0.0
+    )
+    upload_started = time.perf_counter_ns()
     content = await file.read(MAX_UPLOAD_BYTES + 1)
+    upload_read_ms = (time.perf_counter_ns() - upload_started) / 1_000_000
     if len(content) > MAX_UPLOAD_BYTES:
         raise HTTPException(status_code=413, detail="Upload exceeds configured limit")
 
-    input_data = preprocess_image(content, runtime.input_detail)
-    started = time.perf_counter_ns()
+    input_data, timing = preprocess_image_profiled(content, runtime.input_detail)
+    wait_started = time.perf_counter_ns()
     with invoke_lock:
+        timing["queue_wait"] = (time.perf_counter_ns() - wait_started) / 1_000_000
         runtime.interpreter.set_tensor(runtime.input_detail["index"], input_data)
+        invoke_started = time.perf_counter_ns()
         runtime.interpreter.invoke()
+        timing["invoke"] = (time.perf_counter_ns() - invoke_started) / 1_000_000
         scores = runtime.interpreter.get_tensor(runtime.output_detail["index"])[0]
-    latency_ms = (time.perf_counter_ns() - started) / 1_000_000
 
+    postprocess_started = time.perf_counter_ns()
     scale, zero_point = runtime.output_detail["quantization"]
     if scale:
         scores = (scores.astype(np.float32) - zero_point) * scale
     top_indices = np.argsort(scores)[-5:][::-1]
-    return {
+    timing["postprocess"] = (time.perf_counter_ns() - postprocess_started) / 1_000_000
+    timing["framework_parse"] = framework_parse_ms
+    timing["upload_read"] = upload_read_ms
+    payload = {
         "predictions": [
             {"class_index": int(index), "score": round(float(scores[index]), 6)}
             for index in top_indices
         ],
-        "inference_ms": round(latency_ms, 3),
+        "inference_ms": round(timing["invoke"], 3),
+        "timing_ms": {name: round(value, 6) for name, value in timing.items()},
     }
+    serialize_started = time.perf_counter_ns()
+    encoded = json.dumps(payload, separators=(",", ":")).encode("utf-8")
+    serialize_ms = (time.perf_counter_ns() - serialize_started) / 1_000_000
+    response = Response(content=encoded, media_type="application/json")
+    response.headers["x-edge-serialize-ms"] = f"{serialize_ms:.6f}"
+    response.headers["x-edge-endpoint-pre-serialize-ms"] = (
+        f"{(serialize_started - endpoint_started) / 1_000_000:.6f}"
+    )
+    return response
