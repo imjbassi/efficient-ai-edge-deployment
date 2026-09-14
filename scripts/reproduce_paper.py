@@ -42,7 +42,14 @@ def main() -> None:
     if args.container:
         if args.image is None:
             parser.error("--container requires --image")
-        run(sys.executable, "scripts/benchmark_container.py", "--image", str(args.image))
+        run(
+            sys.executable,
+            "scripts/benchmark_container.py",
+            "--image",
+            str(args.image),
+            "--data-dir",
+            str(args.data_dir),
+        )
         run(sys.executable, "scripts/benchmark_image_size.py")
 
     run(sys.executable, "scripts/plot_latency_audit.py", environment=environment)

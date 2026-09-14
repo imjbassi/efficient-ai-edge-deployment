@@ -16,6 +16,7 @@ INT8 was always smaller, but it was not intrinsically faster or accurate. On the
 - The slim production image was 339.58 MiB uncompressed (89.2x its model) and 81.43 MiB as a compressed archive; the standard-base control was 1,543.65/393.44 MiB.
 - Across 20 cold starts, median readiness was 1.52 s. Across 200 requests, HTTP p50/p99 was 49.87/73.96 ms and post-run RSS was 77.16 MiB.
 - Mean HTTP latency decomposed into 38.66 ms container invocation, 10.96 ms client/loopback transport, and 2.35 ms parsing, upload, decode, resize, normalization, postprocessing, serialization, and residual framework work.
+- A matched 500-image, one-thread run executed directly inside the container averaged 38.83 ms (p50 37.54 ms), 0.17 ms above the service's invocation mean (sampling noise). The 31.40 ms host-native-to-container-direct gap is therefore runtime/backend plus virtualization, not service wrapping; the INT8 graph had zero delegated operations, while an FP32 probe in the same runtime had one XNNPACK-delegated partition.
 
 These are measurements on the named Windows/x86 and Docker Desktop environment, not claims about ARM boards, accelerators, energy, or all neural networks.
 
@@ -23,6 +24,7 @@ These are measurements on the named Windows/x86 and Docker Desktop environment, 
 - [Repeated-process latency results](results/repeated_latency.json)
 - [Paired accuracy results](results/paired_accuracy.json)
 - [Container benchmark results](results/container_benchmark.json)
+- [Container-native latency results](results/container_native_latency.json)
 - [Container image-size comparison](results/image_size_comparison.json)
 - [Quantization diagnostics](results/quantization_diagnostics.json)
 - [Publication status](PUBLICATION_STATUS.md)
@@ -64,6 +66,7 @@ Run the packaging benchmark from a separate terminal after Docker Desktop is rea
 ```powershell
 .venv\Scripts\python scripts\benchmark_container.py `
   --image data\imagenette2-160\val\n01440764\ILSVRC2012_val_00009111.JPEG `
+  --data-dir data\imagenette2-160 `
   --output results\container_benchmark.json
 .venv\Scripts\python scripts\benchmark_image_size.py
 ```

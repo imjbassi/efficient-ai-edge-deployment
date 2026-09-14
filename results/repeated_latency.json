@@ -5,6 +5,7 @@
     "order": "deterministically shuffled matched blocks; FP32/INT8 order alternates within blocks",
     "preprocessing_timed": false,
     "warmup_invocations_per_run": 50,
+    "input_selection_sha256": "7884d383209e588c8d3db4ff70874d1748397565f27baf6d2f40347b637a8802",
     "confidence_interval": "two-sided 95% Student t interval across run means (df=19)",
     "host_note": "Docker Desktop stopped; Windows Balanced power plan; interactive desktop applications intentionally remained open to represent a developer workstation deployment host; benchmark processes used above-normal priority and physical-core-spaced CPU affinity.",
     "logical_cpus": 12,

@@ -20,6 +20,7 @@ import numpy as np
 
 SERVICE_URL = "http://127.0.0.1:8000"
 IMAGE_NAME = "efficient-ai-edge-deployment-edge-inference-service:latest"
+ROOT = Path(__file__).resolve().parents[1]
 
 
 def docker_executable() -> str:
@@ -111,6 +112,7 @@ def summarize(values: list[float]) -> dict:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--image", type=Path, required=True)
+    parser.add_argument("--data-dir", type=Path, default=Path("data/imagenette2-160"))
     parser.add_argument("--output", type=Path, default=Path("results/container_benchmark.json"))
     parser.add_argument("--cold-starts", type=int, default=20)
     parser.add_argument("--requests", type=int, default=200)
@@ -238,6 +240,44 @@ def main() -> None:
         }, indent=2))
     finally:
         docker("compose", "down", "--remove-orphans")
+
+    native_output = args.output.parent / "container_native_latency.json"
+    docker(
+        "run",
+        "--rm",
+        "--cpus",
+        "2",
+        "--memory",
+        "512m",
+        "--read-only",
+        "--tmpfs",
+        "/tmp:size=64m",
+        "-v",
+        f"{(ROOT / 'scripts' / 'benchmark_container_native.py').resolve()}:/app/benchmark_container_native.py:ro",
+        "-v",
+        f"{args.data_dir.resolve()}:/data:ro",
+        "-v",
+        f"{(ROOT / 'models' / 'mobilenet_v2_fp32.tflite').resolve()}:/models/mobilenet_v2_fp32.tflite:ro",
+        "-v",
+        f"{native_output.parent.resolve()}:/output",
+        IMAGE_NAME,
+        "python",
+        "/app/benchmark_container_native.py",
+        "--data-dir",
+        "/data",
+        "--model",
+        "/app/models/mobilenet_v2_int8.tflite",
+        "--delegate-probe-model",
+        "/models/mobilenet_v2_fp32.tflite",
+        "--threads",
+        "1",
+        "--samples",
+        "500",
+        "--warmup",
+        "50",
+        "--output",
+        f"/output/{native_output.name}",
+    )
 
 
 if __name__ == "__main__":

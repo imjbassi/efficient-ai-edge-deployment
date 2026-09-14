@@ -106,6 +106,27 @@ def main() -> None:
     ):
         require(len(stages[name]["raw_ms"]) == 200, f"Unexpected {name} sample count")
 
+    container_native = load_json(ROOT / "results" / "container_native_latency.json")
+    require(container_native["protocol"]["samples"] == 500, "Unexpected container-native sample count")
+    require(container_native["protocol"]["threads"] == 1, "Unexpected container-native thread count")
+    require(
+        container_native["model"]["sha256"] == EXPECTED_MODELS["mobilenet_v2_int8.tflite"][1],
+        "Container-native model hash mismatch",
+    )
+    require(
+        container_native["protocol"]["input_selection_sha256"]
+        == repeated["protocol"]["input_selection_sha256"],
+        "Container-native input selection does not match the native latency run",
+    )
+    require(
+        container_native["runtime"]["xnnpack_active_for_benchmarked_int8_graph"] is False,
+        "Container-native delegate status changed",
+    )
+    require(
+        container_native["runtime"]["fp32_delegate_probe"]["delegated_ops"] > 0,
+        "Container runtime no longer delegates the FP32 probe",
+    )
+
     image_sizes = load_json(ROOT / "results" / "image_size_comparison.json")
     slim = image_sizes["images"]["slim"]
     standard = image_sizes["images"]["standard"]

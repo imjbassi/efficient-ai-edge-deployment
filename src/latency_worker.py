@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import platform
@@ -48,6 +49,8 @@ def main() -> None:
     paths = image_paths(args.data_dir / "val")
     random.Random(args.seed).shuffle(paths)
     paths = paths[: args.samples]
+    relative_paths = [path.relative_to(args.data_dir).as_posix() for path in paths]
+    input_selection_sha256 = hashlib.sha256("\n".join(relative_paths).encode()).hexdigest()
     arrays = [preprocess(path) for path in paths]
     options = {"model_path": str(args.model), "num_threads": args.threads}
     if args.disable_default_delegates:
@@ -94,6 +97,7 @@ def main() -> None:
         "images": len(batches) * args.batch_size,
         "invocations": len(batches),
         "warmup_invocations": args.warmup,
+        "input_selection_sha256": input_selection_sha256,
         "idle_cpu_percent_before_interpreter": idle_cpu_percent,
         "cpu_affinity": process.cpu_affinity(),
         "process_priority": process.nice(),

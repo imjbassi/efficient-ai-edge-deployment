@@ -8,6 +8,7 @@ The checked-in JSON files are machine-readable sources for the manuscript:
 - `repeated_latency.json`: 20 fresh-process replicates for every backend, thread, batch, and granularity condition, including raw timings and host controls.
 - `quantization_diagnostics.json`: per-tensor prediction distribution and per-channel depthwise-weight scale/range statistics.
 - `container_benchmark.json`: Docker versions, image size, 20 cold starts, 200 end-to-end request timings, server-stage decomposition, resource limits, and RSS.
+- `container_native_latency.json`: one direct 500-image invocation run inside the service image, with model and input-selection hashes plus delegated-op evidence.
 - `image_size_comparison.json`: uncompressed and deterministic gzip-compressed image sizes for pinned slim and standard Python bases.
 
 `scripts/benchmark_image_size.py` regenerates the image-size comparison from the pinned bases.
