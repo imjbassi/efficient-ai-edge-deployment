@@ -90,9 +90,30 @@ def main() -> None:
     require(depthwise["maximum_channel_range_ratio"] > 700, "Depthwise range evidence changed")
 
     container = load_json(ROOT / "results" / "container_benchmark.json")
-    require(container["cold_start"]["samples"] == 5, "Unexpected cold-start count")
+    require(container["cold_start"]["samples"] == 20, "Unexpected cold-start count")
     require(container["single_stream_http"]["samples"] == 200, "Unexpected HTTP sample count")
     require(container["runtime"]["read_only_root"] is True, "Container root is not read-only")
+    stages = container["server_breakdown"]["stages"]
+    for name in (
+        "framework_parse",
+        "upload_read",
+        "decode",
+        "resize_crop",
+        "normalize_quantize",
+        "invoke",
+        "serialize",
+        "client_transport",
+    ):
+        require(len(stages[name]["raw_ms"]) == 200, f"Unexpected {name} sample count")
+
+    image_sizes = load_json(ROOT / "results" / "image_size_comparison.json")
+    slim = image_sizes["images"]["slim"]
+    standard = image_sizes["images"]["standard"]
+    require(slim["gzip_docker_save_bytes"] > 0, "Missing compressed slim-image size")
+    require(
+        slim["uncompressed_bytes"] < standard["uncompressed_bytes"],
+        "Slim image is not smaller than standard-base control",
+    )
 
     for asset in (
         ROOT / "paper" / "figures" / "latency_audit.pdf",

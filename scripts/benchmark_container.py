@@ -34,12 +34,20 @@ def docker_executable() -> str:
     raise FileNotFoundError("Docker CLI was not found on PATH or in Docker Desktop's default location")
 
 
+def docker_environment() -> dict[str, str]:
+    environment = os.environ.copy()
+    docker_directory = str(Path(docker_executable()).parent)
+    environment["PATH"] = docker_directory + os.pathsep + environment.get("PATH", "")
+    return environment
+
+
 def docker(*arguments: str, capture: bool = False) -> str:
     result = subprocess.run(
         [docker_executable(), *arguments],
         check=True,
         text=True,
         capture_output=capture,
+        env=docker_environment(),
     )
     return result.stdout.strip() if capture else ""
 
@@ -104,7 +112,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--image", type=Path, required=True)
     parser.add_argument("--output", type=Path, default=Path("results/container_benchmark.json"))
-    parser.add_argument("--cold-starts", type=int, default=5)
+    parser.add_argument("--cold-starts", type=int, default=20)
     parser.add_argument("--requests", type=int, default=200)
     parser.add_argument("--warmup-requests", type=int, default=20)
     args = parser.parse_args()
@@ -169,7 +177,7 @@ def main() -> None:
         )[0]["HostConfig"]
         runtime_user = docker("exec", "edge_inference_service", "id", capture=True)
         result = {
-            "schema_version": 1,
+            "schema_version": 2,
             "environment": {
                 "host_platform": platform.platform(),
                 "docker_client": docker("version", "--format", "{{.Client.Version}}", capture=True),

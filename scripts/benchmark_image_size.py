@@ -17,7 +17,10 @@ DEFAULT_SLIM_BASE = (
     "python:3.10-slim-bookworm@sha256:"
     "68d914ec641a0b69267ce65184d000a2bc3a9ee2590ab702b82250ab2385735a"
 )
-DEFAULT_STANDARD_BASE = "python:3.10-bookworm"
+DEFAULT_STANDARD_BASE = (
+    "python:3.10-bookworm@sha256:"
+    "94c362db08c5b38857943d31b10558ff1856e918605c474d205d72a534929d4e"
+)
 
 
 def docker_executable() -> str:
@@ -32,6 +35,13 @@ def docker_executable() -> str:
     raise FileNotFoundError("Docker CLI was not found")
 
 
+def docker_environment() -> dict[str, str]:
+    environment = os.environ.copy()
+    docker_directory = str(Path(docker_executable()).parent)
+    environment["PATH"] = docker_directory + os.pathsep + environment.get("PATH", "")
+    return environment
+
+
 def docker(*arguments: str, capture: bool = False) -> str:
     result = subprocess.run(
         [docker_executable(), *arguments],
@@ -39,6 +49,7 @@ def docker(*arguments: str, capture: bool = False) -> str:
         check=True,
         text=True,
         capture_output=capture,
+        env=docker_environment(),
     )
     return result.stdout.strip() if capture else ""
 
@@ -51,6 +62,7 @@ def compressed_archive_size(image: str, destination: Path) -> int:
             [docker_executable(), "image", "save", image],
             cwd=ROOT,
             stdout=subprocess.PIPE,
+            env=docker_environment(),
         )
         assert process.stdout is not None
         shutil.copyfileobj(process.stdout, compressed, length=1024 * 1024)

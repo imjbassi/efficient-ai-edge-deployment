@@ -8,7 +8,7 @@ The repository is ready for public release as a reproducible research artifact a
 - Per-channel and per-tensor INT8 controls generated from the same graph and 200-image calibration set.
 - Twenty fresh-process latency replicates per configuration across backends, 1/2/4/6 threads, and batch 1/4, with raw timings and host controls.
 - Prediction-distribution and depthwise-channel-range evidence for the per-tensor numerical collapse.
-- Five container cold starts, 200 localhost HTTP requests, image size, RSS, runtime identity, and enforced resource limits.
+- Twenty container cold starts, 200 localhost HTTP requests, measured server-stage decomposition, compressed and uncompressed image-size controls, RSS, runtime identity, and enforced resource limits.
 - Full dataset digest, reproducible TFLite binaries, figure-generation code, manuscript source, compiled PDF, and continuous integration.
 
 ## Scope and limitations
@@ -17,4 +17,4 @@ The claims apply to the reported MobileNetV2, Imagenette, Windows/x86 host, Tens
 
 ## Remaining submission choices
 
-The venue-independent engineering and measurement work is complete except for packaging measurements if Docker Desktop is unavailable. Peer-reviewed submission still requires the author's venue choice, venue template and page limit, anonymization policy, author-affiliation and funding confirmation, and disclosure or artifact forms. A Zenodo DOI requires linking the final GitHub release from the author's Zenodo account. Broader empirical claims require new experiments on full ImageNet, additional architectures, and named edge devices.
+The venue-independent engineering and measurement work is complete. Peer-reviewed submission still requires the author's venue choice, venue template and page limit, anonymization policy, author-affiliation and funding confirmation, and disclosure or artifact forms. The versioned GitHub release must be archived from the author's Zenodo account and its DOI inserted before submission. Broader empirical claims require new experiments on full ImageNet, additional architectures, and named edge devices.

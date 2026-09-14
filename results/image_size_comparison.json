@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "compressed_definition": "byte size of `docker image save` output compressed with deterministic gzip level 9",
+  "images": {
+    "slim": {
+      "name": "edge-inference-slim:measurement",
+      "id": "sha256:abeb24a366105603821ec6c36344e5b30543564c5baf1b6cb7949e5683d442a3",
+      "base_image": "python:3.10-slim-bookworm@sha256:68d914ec641a0b69267ce65184d000a2bc3a9ee2590ab702b82250ab2385735a",
+      "uncompressed_bytes": 356080179,
+      "gzip_docker_save_bytes": 85381337,
+      "uncompressed_reduction_vs_standard_percent": 78.00120146320974,
+      "compressed_reduction_vs_standard_percent": 79.30395862047187
+    },
+    "standard": {
+      "name": "edge-inference-standard:measurement",
+      "id": "sha256:0d9378d9d1882b42edb9137a716c54f54119f11756302177ce81b40761f313ee",
+      "base_image": "python:3.10-bookworm@sha256:94c362db08c5b38857943d31b10558ff1856e918605c474d205d72a534929d4e",
+      "uncompressed_bytes": 1618634665,
+      "gzip_docker_save_bytes": 412549122
+    }
+  }
+}

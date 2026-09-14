@@ -13,7 +13,9 @@ INT8 was always smaller, but it was not intrinsically faster or accurate. On the
 - One-thread XNNPACK produced a 1.27x paired geometric-mean speedup (95% CI [1.20, 1.35]) across 20 fresh processes.
 - TensorFlow Lite 2.15.1's `BUILTIN_WITHOUT_DEFAULT_DELEGATES` counterfactual made INT8 2.24x slower: FP32/INT8 speedup was 0.45x (95% CI [0.42, 0.47]). XNNPACK is the default CPU delegate.
 - Per-tensor INT8 had similar latency to per-channel INT8 but collapsed to 1.04% top-1 accuracy. It used only 187 output classes, concentrated 19.6% of predictions in one class, and removed channel-specific scales from depthwise tensors whose per-channel range ratios reach 754x.
-- The production container was 339.58 MiB uncompressed, reached health in a median 1.69 s, used 77.36 MiB RSS after load, and delivered localhost HTTP p50/p99 latency of 46.34/71.85 ms.
+- The slim production image was 339.58 MiB uncompressed (89.2x its model) and 81.43 MiB as a compressed archive; the standard-base control was 1,543.65/393.44 MiB.
+- Across 20 cold starts, median readiness was 1.52 s. Across 200 requests, HTTP p50/p99 was 49.87/73.96 ms and post-run RSS was 77.16 MiB.
+- Mean HTTP latency decomposed into 38.66 ms container invocation, 10.96 ms client/loopback transport, and 2.35 ms parsing, upload, decode, resize, normalization, postprocessing, serialization, and residual framework work.
 
 These are measurements on the named Windows/x86 and Docker Desktop environment, not claims about ARM boards, accelerators, energy, or all neural networks.
 
@@ -21,9 +23,11 @@ These are measurements on the named Windows/x86 and Docker Desktop environment, 
 - [Repeated-process latency results](results/repeated_latency.json)
 - [Paired accuracy results](results/paired_accuracy.json)
 - [Container benchmark results](results/container_benchmark.json)
+- [Container image-size comparison](results/image_size_comparison.json)
 - [Quantization diagnostics](results/quantization_diagnostics.json)
 - [Publication status](PUBLICATION_STATUS.md)
 - [Citation metadata](CITATION.cff)
+- [Windows Docker stale-socket recovery](docs/docker-desktop-windows-recovery.md)
 
 ## Reproduce the paper
 

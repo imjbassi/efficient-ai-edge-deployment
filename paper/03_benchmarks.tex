@@ -57,7 +57,9 @@ XNNPACK, batch 4 & 9.86 & 7.16 & 1.38 [1.31, 1.46]\\
 
 \subsection{Packaging is measurable}
 
-The production container is 339.58 MiB uncompressed. Across five clean starts, median time from Compose invocation to the first successful health response is 1.69 s (range 1.67--2.09 s); ready-state RSS is 65.58--65.75 MiB. After warm-up, 200 sequential localhost requests have mean 49.39 ms, p50 46.34 ms, p90 62.88 ms, and p99 71.85 ms. RSS after the request run is 77.36 MiB. These figures include image upload, decoding, preprocessing, inference, and response serialization, and therefore answer a different question than native kernel timing.
+The slim production image is 339.58 MiB uncompressed---89.2$\times$ its 3.81 MiB model---and 81.43 MiB as a compressed image archive. The standard-base control is 1,543.65 MiB uncompressed and 393.44 MiB compressed, so the slim base reduces the two measures by 78.0\% and 79.3\%. Across 20 clean starts, median time from Compose invocation to the first successful health response is 1.52 s (range 1.39--1.83 s); ready-state RSS is 65.05--65.72 MiB.
+
+After warm-up, 200 sequential localhost requests have mean 51.97 ms, p50 49.87 ms, p90 65.80 ms, and p99 73.96 ms. The additive mean decomposition is 38.66 ms for container invocation, 10.96 ms for client/loopback transport, and 2.35 ms for all other server work. The latter comprises framework/multipart parsing (0.67 ms), decode (0.30 ms), resize/crop (0.74 ms), normalize/quantize (0.26 ms), postprocessing (0.11 ms), serialization (0.04 ms), and 0.23 ms unattributed; upload read and queue wait round below 0.01 ms. Thus 31.23 ms of the 44.54 ms gap from 7.43 ms native to 51.97 ms HTTP mean occurs inside the container's invocation boundary, while measured transport contributes 10.96 ms. Runtime/version, virtualization, and the two-CPU ceiling remain bundled within that invocation difference. RSS after requests is 77.16 MiB.
 
 \begin{table}[t]
 \centering
@@ -68,10 +70,12 @@ The production container is 339.58 MiB uncompressed. Across five clean starts, m
 \toprule
 \textbf{Metric} & \textbf{Measured value}\\
 \midrule
-Uncompressed image size & 339.58 MiB\\
-Cold start, median (range) & 1.69 s (1.67--2.09)\\
-HTTP latency, p50 / p99 & 46.34 / 71.85 ms\\
-RSS after 200 requests & 77.36 MiB\\
+Slim image, raw / compressed & 339.58 / 81.43 MiB\\
+Image / model, uncompressed & 89.2$\times$\\
+Standard base, raw / compressed & 1543.65 / 393.44 MiB\\
+Cold start, median (range), $n=20$ & 1.52 s (1.39--1.83)\\
+HTTP latency, p50 / p99, $n=200$ & 49.87 / 73.96 ms\\
+RSS after 200 requests & 77.16 MiB\\
 Runtime limits & 2 CPUs / 512 MiB\\
 \bottomrule
 \end{tabular}
