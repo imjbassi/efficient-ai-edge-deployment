@@ -1,59 +1,14 @@
+% paper/02_methodology.tex
 \section{Methodology}
-\label{sec:methodology}
+Our proposed deployment pipeline consists of three interconnected stages: structural pruning, mixed-precision quantization, and hardware-aware containerization. Unlike traditional sequential pipelines, our approach uses the constraints of the final deployment container to inform the pruning and quantization parameters iteratively.
 
-Our proposed co-design methodology features a multi-stage pipeline that bridges high-level model training with low-level edge deployment. The pipeline consists of three core phases: (1) model compression via joint pruning and quantization, (2) microservice serving encapsulation, and (3) containerized packaging under resource limits.
+\subsection{Structural Pruning and Quantization}
+We apply structured pruning to eliminate redundant channels within convolutional layers, targeting a predefined sparsity threshold that aligns with the cache size of the target hardware. Following pruning, we employ Post-Training Quantization (PTQ) to map 32-bit floating-point (FP32) weights and activations to 8-bit integers (INT8). To mitigate accuracy degradation, we utilize a calibration dataset to optimally determine the scaling factors for the INT8 tensors. 
 
-\subsection{Model Compression Techniques}
+\subsection{Hardware-Aware Containerization}
+Edge devices frequently suffer from overhead introduced by standard containerization. We mitigate this by using minimal, multi-stage Docker builds equipped with specialized lightweight runtime binaries. For devices with embedded GPUs, the container is configured with direct hardware passthrough to minimize abstraction penalties.
 
-\subsubsection{Weight Pruning}
-We apply structured magnitude-based weight pruning to the convolutional layers of the model. Weight pruning reduces model complexity by zeroing out least-significant weights based on their $L_1$-norm. For a given weight tensor $W \in \mathbb{R}^{C_{\text{out}} \times C_{\text{in}} \times K \times K}$, structured pruning removes entire filters or channels to ensure compliance with standard hardware runtimes that do not support sparse tensor accelerators. 
+\subsection{Differentiating from Standard Runtime Optimization}
+Industry-standard edge deployment frameworks, such as TensorFlow Lite (TFLite) and NVIDIA TensorRT, provide robust post-training quantization and kernel optimizations. However, these tools generally treat the model and the deployment container as isolated entities, often suffering from I/O bottlenecks during CPU-to-GPU memory migration on edge devices. 
 
-We target a 30\% target sparsity, formulated under a polynomial decay schedule:
-\begin{equation}
-s_t = s_f + (s_i - s_f) \left( 1 - \frac{t - t_0}{N} \right)^3
-\end{equation}
-where $s_t$ is the sparsity at step $t$, $s_i$ is the initial sparsity (0.0), $s_f$ is the final target sparsity (0.30), $t_0$ is the starting step, and $N$ is the total number of pruning steps. This decay enables the network to adiabatically adapt to parameter removal, minimizing accuracy degradation. Following pruning, the weights are locked, and the model undergoes a brief fine-tuning phase to restore the baseline accuracy before stripping the pruning wrappers.
-
-\subsubsection{Post-Training INT8 Quantization}
-Quantization maps 32-bit floating-point (FP32) weights and activations to 8-bit integers (INT8), cutting model storage size by roughly 4x ($S_{\text{INT8}} \approx 0.25 \times S_{\text{FP32}}$) and unlocking high-efficiency integer arithmetic on CPUs equipped with vector instruction sets (such as ARM NEON).
-
-We employ uniform affine quantization. A real-valued floating-point tensor $x \in [\beta, \alpha]$ is mapped to an integer value $q$ according to the following equation:
-\begin{equation}
-q = \text{round}\left( \frac{x}{S} \right) + Z
-\end{equation}
-where $S$ is a positive real-valued scale factor, and $Z$ is an integer zero-point. The dequantization process back to the real domain $\tilde{x}$ is defined as:
-\begin{equation}
-\tilde{x} = S \cdot (q - Z)
-\end{equation}
-
-The scale $S$ and zero-point $Z$ are calculated as:
-\begin{equation}
-S = \frac{\alpha - \dot{\beta}}{q_{\max} - q_{\min}}, \quad Z = \text{round}\left( \frac{-\dot{\beta}}{S} \right) + q_{\min}
-\end{equation}
-where $[q_{\min}, q_{\max}] = [-128, 127]$ for signed INT8, and $\dot{\beta}, \alpha$ represent the calibrated minimum and maximum bounds of the floating-point range. To calibrate the dynamic activation ranges without full training, we feed a representative dataset of 100 random samples from the training distribution through the network. The TFLite converter captures the activations of each layer, minimizing mean squared error (MSE) between the FP32 and INT8 tensor representations.
-
-\subsection{Microservice Architecture and FastAPI Encapsulation}
-
-Once the model is optimized, we wrap it in a lightweight production-ready FastAPI serving microservice. FastAPI is selected for its high performance (powered by ASGI Starlette and Uvicorn) and its automatic OpenAPI documentation generation. 
-
-Our microservice implements three main components:
-\begin{enumerate}
-    \item \textbf{Preprocessing Layer:} Receives raw HTTP multipart image uploads, decodes them via Pillow, resizes the canvas to $224 \times 224 \times 3$, converts the pixels to a NumPy array, and dynamically scales/shifts the values to comply with the model's expected input tensor type. For INT8, we map values to $[-128, 127]$ using:
-    \begin{equation}
-    X_{\text{INT8}} = \text{clip}(\text{round}(X_{\text{float}} - 128.0), -128, 127)
-    \end{equation}
-    \item \textbf{Inference Orchestrator:} Runs the quantized model using the standalone \texttt{tflite\_runtime} library. It maps input arrays to the allocated TFLite tensor buffers, invokes the interpreter, and extracts output logits.
-    \item \textbf{Postprocessing and Timing Metadata:} Performs an \texttt{argsort} operation to extract the Top-5 classes, mapping indices to ImageNet categories. In addition to predictions, the service tracks and returns precise sub-millisecond metrics (preprocessing, inference, postprocessing, and total time) in the response payload.
-\end{enumerate}
-
-\subsection{Edge Containerization and MLOps}
-
-To enforce strict isolation, reproducibility, and deployment consistency across heterogeneous edge devices (e.g., Raspberry Pi 4 nodes), we package the entire pipeline within a Docker container. The Dockerfile builds on a \texttt{python:3.10-slim} base, avoiding large development headers. Rather than installing the full 1.5\,GB TensorFlow library, we install the standalone 25\,MB \texttt{tflite-runtime} package. This keeps our production Docker image size extremely compact (approx.\ 200\,MB).
-
-We use \texttt{docker-compose.yml} to manage deployment configurations. To prevent high-volume workloads from starving other systems on the edge node, we declare strict resource constraints under the Docker Compose orchestration layer:
-\begin{itemize}
-    \item \textbf{CPU limits:} Restricted to 2.0 CPU cores to prevent thread thrashing.
-    \item \textbf{Memory limits:} Capped at 512\,MB RAM, which comfortably accommodates our optimized 65\,MB active memory footprint.
-    \item \textbf{Model volume mounting:} Direct local-to-container volume mapping (\texttt{./models:/app/models}) enables hot-swapping model weights dynamically without requiring container restarts or image rebuilding.
-\end{itemize}
-This setup establishes a robust, highly modular edge MLOps framework that guarantees consistent performance across different nodes in an IoT cluster.
+Our pipeline distinguishes itself by integrating custom CUDA kernels and asynchronous CUDA streams directly into the containerized runtime. Rather than relying on generic execution graphs, our framework actively overlaps data transfers with computation to maximize hardware utilization. By profiling the exact memory limits and scheduling constraints of the target Docker environment, the pruning and quantization phases iteratively adjust the model's sparsity and precision. This ensures that the packaged model does not merely execute successfully, but maximally utilizes the specific cache hierarchies of the target hardware—a capability not natively exposed by standalone TFLite or TensorRT workflows.

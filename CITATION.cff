@@ -1,0 +1,12 @@
+cff-version: 1.2.0
+message: "If you use this repository or manuscript, please cite it as follows."
+title: "Efficient Packaging and Deployment of AI Models for Edge Inference"
+authors:
+  - family-names: Bassi
+    given-names: Jaiveer
+version: 1.0.0
+type: software
+repository-code: "https://github.com/imjbassi/efficient-ai-edge-deployment"
+abstract: >-
+  An auditable reference implementation for packaging MobileNetV2 edge inference
+  with integer quantization, optional pruning, FastAPI serving, and Docker.

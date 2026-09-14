@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 import sys
 import time
@@ -44,12 +46,12 @@ except ImportError:
         tflite_interpreter = tflite.Interpreter
         logger.info("Successfully imported tflite_runtime Interpreter.")
     except ImportError:
-        logger.warning("TensorFlow/tflite_runtime not available. Running service in Emulated/Mock Mode.")
+        logger.warning("TensorFlow/tflite_runtime not available. Inference is unavailable.")
 
 # Initialize FastAPI App
 app = FastAPI(
     title="Edge Inference Service",
-    description="Production-ready FastAPI microservice serving quantized INT8 MobileNetV2 for edge devices.",
+    description="Research reference service serving quantized INT8 MobileNetV2 for edge devices.",
     version="1.0.0"
 )
 
@@ -57,7 +59,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -74,13 +76,14 @@ interpreter = None
 input_details = None
 output_details = None
 model_loaded_path = None
+ALLOW_MOCK = os.getenv("EDGE_ALLOW_MOCK", "0") == "1"
 
 def load_tflite_model():
     global interpreter, input_details, output_details, model_loaded_path
     if tflite_interpreter is None:
         logger.warning("TFLite Interpreter is not installed. Model cannot be loaded natively.")
         return False
-        
+
     for path in MODEL_PATHS:
         if os.path.exists(path):
             try:
@@ -94,8 +97,8 @@ def load_tflite_model():
                 return True
             except Exception as e:
                 logger.error(f"Failed to load model from {path}: {e}")
-                
-    logger.warning("No valid TFLite model found at configured paths. Serving mock predictions.")
+
+    logger.warning("No valid TFLite model found at configured paths. Model is unavailable.")
     return False
 
 # Load model at startup
@@ -134,26 +137,28 @@ def preprocess_image(image_bytes: bytes) -> np.ndarray:
         raise HTTPException(status_code=500, detail="NumPy is not available.")
     if Image is None:
         raise HTTPException(status_code=500, detail="Pillow is not available.")
-        
+
     try:
         # Load image from bytes
         img = Image.open(io.BytesIO(image_bytes)).convert('RGB')
         # Resize to MobileNetV2 input size
         img = img.resize((224, 224))
         img_array = np.array(img, dtype=np.float32)
-        
+
         # Expand dimensions to batch size 1
         img_array = np.expand_dims(img_array, axis=0)
-        
+
         # Check model expected input dtype
         global input_details
         if input_details is not None:
             expected_dtype = input_details[0]['dtype']
-            if expected_dtype == np.int8:
-                # Map float [0.0, 255.0] to int8 [-128, 127]
-                img_array = (img_array - 128.0).astype(np.int8)
-            elif expected_dtype == np.uint8:
-                img_array = img_array.astype(np.uint8)
+            if expected_dtype in (np.int8, np.uint8):
+                img_array = (img_array / 127.5) - 1.0
+                scale, zero_point = input_details[0].get("quantization", (0.0, 0))
+                if not scale:
+                    raise HTTPException(status_code=500, detail="Model has invalid input quantization metadata.")
+                info = np.iinfo(expected_dtype)
+                img_array = np.clip(np.round(img_array / scale + zero_point), info.min, info.max).astype(expected_dtype)
             else:
                 # Default preprocessing for MobileNetV2 FP32 ([-1, 1] scaling)
                 img_array = (img_array / 127.5) - 1.0
@@ -161,8 +166,10 @@ def preprocess_image(image_bytes: bytes) -> np.ndarray:
         else:
             # Default fallback scaling
             img_array = (img_array / 127.5) - 1.0
-            
+
         return img_array
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error preprocessing image: {e}")
         raise HTTPException(status_code=400, detail=f"Invalid image content: {e}")
@@ -185,8 +192,9 @@ async def root():
 @app.get("/health", tags=["General"])
 async def health():
     """Exposes health status for Kubernetes/Docker edge orchestration."""
-    status_code = status.HTTP_200_OK if interpreter is not None else status.HTTP_200_OK  # Graceful even if mock serving
-    
+    if interpreter is None:
+        raise HTTPException(status_code=503, detail="Model unavailable")
+
     # Check current process memory usage
     ram_mb = 0.0
     try:
@@ -195,7 +203,7 @@ async def health():
         ram_mb = process.memory_info().rss / (1024 * 1024)
     except ImportError:
         pass
-        
+
     return {
         "status": "healthy" if interpreter is not None else "degraded_mock_active",
         "timestamp": time.time(),
@@ -211,7 +219,7 @@ async def metadata():
     """Exposes input/output layer profiles for verification."""
     if interpreter is None:
         raise HTTPException(status_code=503, detail="Model is not loaded. No metadata available.")
-        
+
     return {
         "model_path": model_loaded_path,
         "input_details": [
@@ -240,7 +248,10 @@ async def predict(file: UploadFile = File(...)) -> Dict[str, Any]:
     """
     start_time = time.perf_counter()
     image_bytes = await file.read()
-    
+
+    if interpreter is None and not ALLOW_MOCK:
+        raise HTTPException(status_code=503, detail="No TFLite model is loaded.")
+
     # Check if we should use actual inference or mock inference
     if interpreter is not None and np is not None and Image is not None:
         try:
@@ -248,56 +259,47 @@ async def predict(file: UploadFile = File(...)) -> Dict[str, Any]:
             prep_start = time.perf_counter()
             input_data = preprocess_image(image_bytes)
             preprocess_time = (time.perf_counter() - prep_start) * 1000.0
-            
+
             # Run TFLite inference
             infer_start = time.perf_counter()
             interpreter.set_tensor(input_details[0]['index'], input_data)
             interpreter.invoke()
             output_data = interpreter.get_tensor(output_details[0]['index'])
             inference_time = (time.perf_counter() - infer_start) * 1000.0
-            
+
             # Postprocess results
             post_start = time.perf_counter()
-            
-            # For INT8 models, output is int8. Convert back if needed, or find argmax
+
+            # Dequantize output scores when the model exposes quantization metadata.
             output_squeezed = np.squeeze(output_data)
-            
+            out_scale, out_zero_point = output_details[0].get("quantization", (0.0, 0))
+            if out_scale:
+                output_squeezed = (output_squeezed.astype(np.float32) - out_zero_point) * out_scale
+
             # Find Top-5 classes
             top_indices = np.argsort(output_squeezed)[-5:][::-1]
-            
+
             predictions = []
             for idx in top_indices:
-                score = float(output_squeezed[idx])
-                # If int8 quantized, normalize score to pseudo-probability [0, 1] if not already
-                if output_details[0]['dtype'] == np.int8:
-                    # Dequantize: (q - zero_point) * scale
-                    scale, zero_point = output_details[0]['quantization']
-                    if scale > 0:
-                        dequant_score = (score - zero_point) * scale
-                        prob = float(dequant_score)
-                    else:
-                        # Fallback simple Softmax approximation on int8 scores
-                        prob = float((score + 128.0) / 255.0)
-                else:
-                    prob = score
-                    
-                label = MOCK_LABELS[idx % len(MOCK_LABELS)]
+                prob = float(output_squeezed[idx])
+
+                label = None  # Return true indices; no verified class mapping is bundled.
                 predictions.append({
                     "class_idx": int(idx),
                     "label": label,
                     "confidence": round(prob, 4)
                 })
-                
+
             postprocess_time = (time.perf_counter() - post_start) * 1000.0
             total_time = (time.perf_counter() - start_time) * 1000.0
-            
+
             return {
                 "success": True,
                 "predictions": predictions,
                 "latency_metadata": {
                     "preprocess_time_ms": round(preprocess_time, 2),
                     "inference_time_ms": round(inference_time, 2),
-                    "postprocess_time_ms": round(post_start, 2),
+                    "postprocess_time_ms": round(postprocess_time, 2),
                     "total_service_time_ms": round(total_time, 2)
                 },
                 "model_info": {
@@ -305,20 +307,26 @@ async def predict(file: UploadFile = File(...)) -> Dict[str, Any]:
                     "quantization": "INT8"
                 }
             }
+        except HTTPException:
+            raise
         except Exception as e:
             logger.error(f"Inference pipeline execution failure: {e}")
-            # Fall back to simulated execution on failure rather than returning 500 on edge
-            logger.warning("Inference failed; returning graceful simulated fallback prediction.")
-            
+            if not ALLOW_MOCK:
+                raise HTTPException(status_code=500, detail="Inference execution failed.") from e
+            logger.warning("Inference failed; returning explicitly enabled simulated fallback.")
+
+    if not ALLOW_MOCK:
+        raise HTTPException(status_code=503, detail="Inference dependencies unavailable")
+
     # Simulated Edge Fallback Execution
     # Sourced from Section IV of the paper, average 95 ms inference latency for INT8
     simulated_inference_time = 95.0
     simulated_preprocess_time = 4.2
     simulated_postprocess_time = 1.3
-    
+
     # Wait to simulate edge execution latency (optional, but realistic)
     time.sleep((simulated_inference_time + simulated_preprocess_time) / 1000.0)
-    
+
     # Generate mock prediction based on file content length
     seed_idx = len(image_bytes) % len(MOCK_LABELS)
     predictions = [
@@ -326,9 +334,9 @@ async def predict(file: UploadFile = File(...)) -> Dict[str, Any]:
         {"class_idx": (seed_idx + 1) % len(MOCK_LABELS), "label": MOCK_LABELS[(seed_idx + 1) % len(MOCK_LABELS)], "confidence": 0.0825},
         {"class_idx": (seed_idx + 2) % len(MOCK_LABELS), "label": MOCK_LABELS[(seed_idx + 2) % len(MOCK_LABELS)], "confidence": 0.0411}
     ]
-    
+
     total_time = (time.perf_counter() - start_time) * 1000.0
-    
+
     return {
         "success": True,
         "predictions": predictions,
