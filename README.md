@@ -3,6 +3,7 @@
 [![CI](https://github.com/imjbassi/efficient-ai-edge-deployment/actions/workflows/ci.yml/badge.svg)](https://github.com/imjbassi/efficient-ai-edge-deployment/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![ORCID](https://img.shields.io/badge/ORCID-0009--0006--3633--3220-A6CE39.svg)](https://orcid.org/0009-0006-3633-3220)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22758817.svg)](https://doi.org/10.5281/zenodo.22758817)
 
 Reproducible code and evidence for *When Does INT8 Actually Accelerate Host-CPU Inference?* The project audits MobileNetV2 TensorFlow Lite conversion across quantization granularity, CPU backends, thread counts, batch size, independent process restarts, and container serving.
 
@@ -29,6 +30,7 @@ These are measurements on the named Windows/x86 and Docker Desktop environment, 
 - [Quantization diagnostics](results/quantization_diagnostics.json)
 - [Publication status](PUBLICATION_STATUS.md)
 - [Citation metadata](CITATION.cff)
+- [Archived release DOI](https://doi.org/10.5281/zenodo.22758817)
 - [Windows Docker stale-socket recovery](docs/docker-desktop-windows-recovery.md)
 
 ## Reproduce the paper

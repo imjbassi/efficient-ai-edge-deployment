@@ -1,6 +1,6 @@
 # Publication status
 
-The repository is ready for public release as a reproducible research artifact and preprint. The manuscript has an explicit claim, paired accuracy statistics, independent-process latency uncertainty, backend and quantization controls, measured packaging outcomes, a publication figure, machine-readable raw observations, model hashes, tests, pinned environments, citation metadata, and a hardened container.
+The repository is ready for public release as a reproducible research artifact and preprint. Zenodo DOI `10.5281/zenodo.22758817` is reserved for release `v1.2.0`. The manuscript has an explicit claim, paired accuracy statistics, independent-process latency uncertainty, backend and quantization controls, measured packaging outcomes, a publication figure, machine-readable raw observations, model hashes, tests, pinned environments, citation metadata, and a hardened container.
 
 ## Evidence included
 
@@ -17,4 +17,4 @@ The claims apply to the reported MobileNetV2, Imagenette, Windows/x86 host, Tens
 
 ## Remaining submission choices
 
-The venue-independent engineering and measurement work is complete. Peer-reviewed submission still requires the author's venue choice, venue template and page limit, anonymization policy, author-affiliation and funding confirmation, and disclosure or artifact forms. The versioned GitHub release must be archived from the author's Zenodo account and its DOI inserted before submission. Broader empirical claims require new experiments on full ImageNet, additional architectures, and named edge devices.
+The venue-independent engineering and measurement work is complete. Peer-reviewed submission still requires the author's venue choice, venue template and page limit, anonymization policy, author-affiliation and funding confirmation, and disclosure or artifact forms. Release `v1.2.0` must be uploaded to the saved Zenodo draft and published to register the reserved DOI. Broader empirical claims require new experiments on full ImageNet, additional architectures, and named edge devices.
