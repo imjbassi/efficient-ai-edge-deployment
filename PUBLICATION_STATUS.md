@@ -1,6 +1,6 @@
 # Publication status
 
-The repository is ready for public release as a reproducible research artifact and preprint. Zenodo DOI `10.5281/zenodo.22758817` is reserved for release `v1.2.0`. The manuscript has an explicit claim, paired accuracy statistics, independent-process latency uncertainty, backend and quantization controls, measured packaging outcomes, a publication figure, machine-readable raw observations, model hashes, tests, pinned environments, citation metadata, and a hardened container.
+The repository is publicly released as a reproducible research artifact and preprint. GitHub release `v1.2.0` is archived on Zenodo under version DOI [`10.5281/zenodo.22758817`](https://doi.org/10.5281/zenodo.22758817) and concept DOI [`10.5281/zenodo.22758816`](https://doi.org/10.5281/zenodo.22758816). The manuscript has an explicit claim, paired accuracy statistics, independent-process latency uncertainty, backend and quantization controls, measured packaging outcomes, a publication figure, machine-readable raw observations, model hashes, tests, pinned environments, citation metadata, and a hardened container.
 
 ## Evidence included
 
@@ -10,6 +10,7 @@ The repository is ready for public release as a reproducible research artifact a
 - Prediction-distribution and depthwise-channel-range evidence for the per-tensor numerical collapse.
 - Twenty container cold starts, 200 localhost HTTP requests, measured server-stage decomposition, a matched 500-image direct-container control with delegated-op evidence, compressed and uncompressed image-size controls, RSS, runtime identity, and enforced resource limits.
 - Full dataset digest, reproducible TFLite binaries, figure-generation code, manuscript source, compiled PDF, and continuous integration.
+- Published Zenodo files verified against the local release artifacts: `main.pdf` (109,979 bytes; MD5 `e2dfd05223bfed2f650657db2028829d`) and `efficient-ai-edge-deployment-1.2.0.zip` (20,191,638 bytes; MD5 `27a1e338a72286ebcb19bc86428a5226`).
 
 ## Scope and limitations
 
@@ -17,4 +18,4 @@ The claims apply to the reported MobileNetV2, Imagenette, Windows/x86 host, Tens
 
 ## Remaining submission choices
 
-The venue-independent engineering and measurement work is complete. Peer-reviewed submission still requires the author's venue choice, venue template and page limit, anonymization policy, author-affiliation and funding confirmation, and disclosure or artifact forms. Release `v1.2.0` must be uploaded to the saved Zenodo draft and published to register the reserved DOI. Broader empirical claims require new experiments on full ImageNet, additional architectures, and named edge devices.
+The venue-independent engineering, measurement, release, and archival work is complete. Peer-reviewed submission still requires the author's venue choice, venue template and page limit, anonymization policy, author-affiliation and funding confirmation, and disclosure or artifact forms. Broader empirical claims require new experiments on full ImageNet, additional architectures, and named edge devices.
