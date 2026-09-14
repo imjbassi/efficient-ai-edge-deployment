@@ -9,7 +9,7 @@
         "avg_power_w": 3.2,
         "energy_j": 0.704,
         "energy_efficiency_ips_w": 1.42,
-        "accuracy_top1": 71.8
+        "measurement_status": "reference_emulated"
     },
     "int8_quantized": {
         "model_name": "MobileNetV2 (INT8 Quantized TFLite)",
@@ -21,6 +21,6 @@
         "avg_power_w": 3.0,
         "energy_j": 0.285,
         "energy_efficiency_ips_w": 3.51,
-        "accuracy_top1": 71.3
+        "measurement_status": "reference_emulated"
     }
 }

@@ -21,15 +21,11 @@ COPY requirements.txt .
 # Install dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Create directories for models and source code
+# Create directories for models and source code. Models are mounted at runtime.
 RUN mkdir -p models src
 
 # Copy the source code and model files into the container
 COPY src/ ./src/
-
-# Verify if models are available, or create mock folder if mounting at runtime
-# Copy pre-trained models if they exist in models folder
-COPY models/ ./models/
 
 # Expose the API port
 EXPOSE 8000

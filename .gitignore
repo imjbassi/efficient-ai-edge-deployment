@@ -21,3 +21,9 @@ paper/*.pdf
 paper/*.bbl
 paper/*.blg
 paper/*.synctex.gz
+tmp/
+output/pdf/*.log
+output/pdf/*.aux
+output/pdf/*.bbl
+output/pdf/*.blg
+output/pdf/*.out
